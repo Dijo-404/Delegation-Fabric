@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-quality:
+    name: Python Lint + Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Lint
+        run: uv run ruff check packages/ apps/ tests/
+      - name: Format check
+        run: uv run ruff format --check packages/ apps/ tests/
+      - name: Typecheck
+        run: uv run mypy packages/delegation_fabric_core packages/delegation_fabric_adapters
+
+  python-tests:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Core unit tests
+        run: uv run pytest tests/unit/core/ -v --cov=packages/delegation_fabric_core --cov-report=xml --cov-fail-under=85
+      - name: Security fixture tests
+        run: uv run pytest tests/security/ -v
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        if: always()
+
+  terraform-validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.x"
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive infra/
+        continue-on-error: true
+      - name: Terraform validate
+        run: |
+          cd infra/environments/hackathon
+          terraform init -backend=false
+          terraform validate
+        continue-on-error: true
