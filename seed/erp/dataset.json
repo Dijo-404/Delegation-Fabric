@@ -1,0 +1,2892 @@
+{
+  "counts": {
+    "vendors": 12,
+    "purchase_orders": 48,
+    "invoices": 240,
+    "payment_batches": 1
+  },
+  "vendors": [
+    {
+      "vendor_id": "V-1001",
+      "legal_name": "Vendor 1 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1002",
+      "legal_name": "Vendor 2 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1003",
+      "legal_name": "Vendor 3 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1004",
+      "legal_name": "Vendor 4 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1005",
+      "legal_name": "Vendor 5 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1006",
+      "legal_name": "Vendor 6 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1007",
+      "legal_name": "Vendor 7 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1008",
+      "legal_name": "Vendor 8 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1009",
+      "legal_name": "Vendor 9 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1010",
+      "legal_name": "Vendor 10 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1011",
+      "legal_name": "Vendor 11 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "vendor_id": "V-1012",
+      "legal_name": "Vendor 12 Global Technologies Pvt Ltd",
+      "status": "active",
+      "country_code": "IN",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    }
+  ],
+  "purchase_orders": [
+    {
+      "po_id": "PO-801",
+      "vendor_id": "V-1002",
+      "total_minor": 51000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-802",
+      "vendor_id": "V-1003",
+      "total_minor": 52000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-803",
+      "vendor_id": "V-1004",
+      "total_minor": 53000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-804",
+      "vendor_id": "V-1005",
+      "total_minor": 54000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-805",
+      "vendor_id": "V-1006",
+      "total_minor": 55000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-806",
+      "vendor_id": "V-1007",
+      "total_minor": 56000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-807",
+      "vendor_id": "V-1008",
+      "total_minor": 57000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-808",
+      "vendor_id": "V-1009",
+      "total_minor": 58000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-809",
+      "vendor_id": "V-1010",
+      "total_minor": 59000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-810",
+      "vendor_id": "V-1011",
+      "total_minor": 60000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-811",
+      "vendor_id": "V-1012",
+      "total_minor": 61000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-812",
+      "vendor_id": "V-1001",
+      "total_minor": 62000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-813",
+      "vendor_id": "V-1002",
+      "total_minor": 63000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-814",
+      "vendor_id": "V-1003",
+      "total_minor": 64000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-815",
+      "vendor_id": "V-1004",
+      "total_minor": 65000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-816",
+      "vendor_id": "V-1005",
+      "total_minor": 66000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-817",
+      "vendor_id": "V-1006",
+      "total_minor": 67000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-818",
+      "vendor_id": "V-1007",
+      "total_minor": 68000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-819",
+      "vendor_id": "V-1008",
+      "total_minor": 69000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-820",
+      "vendor_id": "V-1009",
+      "total_minor": 70000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-821",
+      "vendor_id": "V-1010",
+      "total_minor": 71000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-822",
+      "vendor_id": "V-1011",
+      "total_minor": 72000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-823",
+      "vendor_id": "V-1012",
+      "total_minor": 73000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-824",
+      "vendor_id": "V-1001",
+      "total_minor": 74000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-825",
+      "vendor_id": "V-1002",
+      "total_minor": 75000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-826",
+      "vendor_id": "V-1003",
+      "total_minor": 76000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-827",
+      "vendor_id": "V-1004",
+      "total_minor": 77000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-828",
+      "vendor_id": "V-1005",
+      "total_minor": 78000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-829",
+      "vendor_id": "V-1006",
+      "total_minor": 79000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-830",
+      "vendor_id": "V-1007",
+      "total_minor": 80000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-831",
+      "vendor_id": "V-1008",
+      "total_minor": 81000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-832",
+      "vendor_id": "V-1009",
+      "total_minor": 82000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-833",
+      "vendor_id": "V-1010",
+      "total_minor": 83000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-834",
+      "vendor_id": "V-1011",
+      "total_minor": 84000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-835",
+      "vendor_id": "V-1012",
+      "total_minor": 85000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-836",
+      "vendor_id": "V-1001",
+      "total_minor": 86000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-837",
+      "vendor_id": "V-1002",
+      "total_minor": 87000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-838",
+      "vendor_id": "V-1003",
+      "total_minor": 88000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-839",
+      "vendor_id": "V-1004",
+      "total_minor": 89000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-840",
+      "vendor_id": "V-1005",
+      "total_minor": 90000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-841",
+      "vendor_id": "V-1006",
+      "total_minor": 91000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-842",
+      "vendor_id": "V-1007",
+      "total_minor": 92000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-843",
+      "vendor_id": "V-1008",
+      "total_minor": 93000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-844",
+      "vendor_id": "V-1009",
+      "total_minor": 94000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-845",
+      "vendor_id": "V-1010",
+      "total_minor": 95000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-846",
+      "vendor_id": "V-1011",
+      "total_minor": 96000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-847",
+      "vendor_id": "V-1012",
+      "total_minor": 97000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "po_id": "PO-848",
+      "vendor_id": "V-1001",
+      "total_minor": 98000000,
+      "currency": "INR",
+      "status": "open",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    }
+  ],
+  "invoices": [
+    {
+      "invoice_id": "INV-CLN-001",
+      "vendor_id": "V-1003",
+      "po_id": "PO-802",
+      "total_minor": 52000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_001.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-002",
+      "vendor_id": "V-1004",
+      "po_id": "PO-803",
+      "total_minor": 53000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_002.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-003",
+      "vendor_id": "V-1005",
+      "po_id": "PO-804",
+      "total_minor": 54000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_003.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-004",
+      "vendor_id": "V-1006",
+      "po_id": "PO-805",
+      "total_minor": 55000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_004.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-005",
+      "vendor_id": "V-1007",
+      "po_id": "PO-806",
+      "total_minor": 56000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_005.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-006",
+      "vendor_id": "V-1008",
+      "po_id": "PO-807",
+      "total_minor": 57000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_006.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-007",
+      "vendor_id": "V-1009",
+      "po_id": "PO-808",
+      "total_minor": 58000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_007.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-008",
+      "vendor_id": "V-1010",
+      "po_id": "PO-809",
+      "total_minor": 59000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_008.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-009",
+      "vendor_id": "V-1011",
+      "po_id": "PO-810",
+      "total_minor": 60000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_009.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-010",
+      "vendor_id": "V-1012",
+      "po_id": "PO-811",
+      "total_minor": 61000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_010.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-011",
+      "vendor_id": "V-1001",
+      "po_id": "PO-812",
+      "total_minor": 62000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_011.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-012",
+      "vendor_id": "V-1002",
+      "po_id": "PO-813",
+      "total_minor": 63000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_012.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-013",
+      "vendor_id": "V-1003",
+      "po_id": "PO-814",
+      "total_minor": 64000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_013.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-014",
+      "vendor_id": "V-1004",
+      "po_id": "PO-815",
+      "total_minor": 65000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_014.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-015",
+      "vendor_id": "V-1005",
+      "po_id": "PO-816",
+      "total_minor": 66000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_015.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-016",
+      "vendor_id": "V-1006",
+      "po_id": "PO-817",
+      "total_minor": 67000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_016.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-017",
+      "vendor_id": "V-1007",
+      "po_id": "PO-818",
+      "total_minor": 68000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_017.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-018",
+      "vendor_id": "V-1008",
+      "po_id": "PO-819",
+      "total_minor": 69000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_018.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-019",
+      "vendor_id": "V-1009",
+      "po_id": "PO-820",
+      "total_minor": 70000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_019.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-020",
+      "vendor_id": "V-1010",
+      "po_id": "PO-821",
+      "total_minor": 71000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_020.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-021",
+      "vendor_id": "V-1011",
+      "po_id": "PO-822",
+      "total_minor": 72000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_021.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-022",
+      "vendor_id": "V-1012",
+      "po_id": "PO-823",
+      "total_minor": 73000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_022.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-023",
+      "vendor_id": "V-1001",
+      "po_id": "PO-824",
+      "total_minor": 74000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_023.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-024",
+      "vendor_id": "V-1002",
+      "po_id": "PO-825",
+      "total_minor": 75000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_024.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-025",
+      "vendor_id": "V-1003",
+      "po_id": "PO-826",
+      "total_minor": 76000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_025.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-026",
+      "vendor_id": "V-1004",
+      "po_id": "PO-827",
+      "total_minor": 77000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_026.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-027",
+      "vendor_id": "V-1005",
+      "po_id": "PO-828",
+      "total_minor": 78000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_027.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-028",
+      "vendor_id": "V-1006",
+      "po_id": "PO-829",
+      "total_minor": 79000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_028.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-029",
+      "vendor_id": "V-1007",
+      "po_id": "PO-830",
+      "total_minor": 80000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_029.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-030",
+      "vendor_id": "V-1008",
+      "po_id": "PO-831",
+      "total_minor": 81000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_030.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-031",
+      "vendor_id": "V-1009",
+      "po_id": "PO-832",
+      "total_minor": 82000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_031.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-032",
+      "vendor_id": "V-1010",
+      "po_id": "PO-833",
+      "total_minor": 83000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_032.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-033",
+      "vendor_id": "V-1011",
+      "po_id": "PO-834",
+      "total_minor": 84000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_033.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-034",
+      "vendor_id": "V-1012",
+      "po_id": "PO-835",
+      "total_minor": 85000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_034.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-035",
+      "vendor_id": "V-1001",
+      "po_id": "PO-836",
+      "total_minor": 86000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_035.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-036",
+      "vendor_id": "V-1002",
+      "po_id": "PO-837",
+      "total_minor": 87000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_036.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-037",
+      "vendor_id": "V-1003",
+      "po_id": "PO-838",
+      "total_minor": 88000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_037.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-038",
+      "vendor_id": "V-1004",
+      "po_id": "PO-839",
+      "total_minor": 89000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_038.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-039",
+      "vendor_id": "V-1005",
+      "po_id": "PO-840",
+      "total_minor": 90000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_039.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-040",
+      "vendor_id": "V-1006",
+      "po_id": "PO-841",
+      "total_minor": 91000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_040.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-041",
+      "vendor_id": "V-1007",
+      "po_id": "PO-842",
+      "total_minor": 92000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_041.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-042",
+      "vendor_id": "V-1008",
+      "po_id": "PO-843",
+      "total_minor": 93000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_042.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-043",
+      "vendor_id": "V-1009",
+      "po_id": "PO-844",
+      "total_minor": 94000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_043.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-044",
+      "vendor_id": "V-1010",
+      "po_id": "PO-845",
+      "total_minor": 95000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_044.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-045",
+      "vendor_id": "V-1011",
+      "po_id": "PO-846",
+      "total_minor": 96000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_045.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-046",
+      "vendor_id": "V-1012",
+      "po_id": "PO-847",
+      "total_minor": 97000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_046.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-047",
+      "vendor_id": "V-1001",
+      "po_id": "PO-848",
+      "total_minor": 98000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_047.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-048",
+      "vendor_id": "V-1002",
+      "po_id": "PO-801",
+      "total_minor": 51000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_048.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-049",
+      "vendor_id": "V-1003",
+      "po_id": "PO-802",
+      "total_minor": 52000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_049.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-050",
+      "vendor_id": "V-1004",
+      "po_id": "PO-803",
+      "total_minor": 53000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_050.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-051",
+      "vendor_id": "V-1005",
+      "po_id": "PO-804",
+      "total_minor": 54000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_051.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-052",
+      "vendor_id": "V-1006",
+      "po_id": "PO-805",
+      "total_minor": 55000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_052.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-053",
+      "vendor_id": "V-1007",
+      "po_id": "PO-806",
+      "total_minor": 56000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_053.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-054",
+      "vendor_id": "V-1008",
+      "po_id": "PO-807",
+      "total_minor": 57000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_054.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-055",
+      "vendor_id": "V-1009",
+      "po_id": "PO-808",
+      "total_minor": 58000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_055.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-056",
+      "vendor_id": "V-1010",
+      "po_id": "PO-809",
+      "total_minor": 59000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_056.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-057",
+      "vendor_id": "V-1011",
+      "po_id": "PO-810",
+      "total_minor": 60000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_057.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-058",
+      "vendor_id": "V-1012",
+      "po_id": "PO-811",
+      "total_minor": 61000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_058.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-059",
+      "vendor_id": "V-1001",
+      "po_id": "PO-812",
+      "total_minor": 62000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_059.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-060",
+      "vendor_id": "V-1002",
+      "po_id": "PO-813",
+      "total_minor": 63000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_060.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-061",
+      "vendor_id": "V-1003",
+      "po_id": "PO-814",
+      "total_minor": 64000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_061.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-062",
+      "vendor_id": "V-1004",
+      "po_id": "PO-815",
+      "total_minor": 65000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_062.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-063",
+      "vendor_id": "V-1005",
+      "po_id": "PO-816",
+      "total_minor": 66000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_063.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-064",
+      "vendor_id": "V-1006",
+      "po_id": "PO-817",
+      "total_minor": 67000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_064.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-065",
+      "vendor_id": "V-1007",
+      "po_id": "PO-818",
+      "total_minor": 68000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_065.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-066",
+      "vendor_id": "V-1008",
+      "po_id": "PO-819",
+      "total_minor": 69000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_066.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-067",
+      "vendor_id": "V-1009",
+      "po_id": "PO-820",
+      "total_minor": 70000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_067.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-068",
+      "vendor_id": "V-1010",
+      "po_id": "PO-821",
+      "total_minor": 71000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_068.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-069",
+      "vendor_id": "V-1011",
+      "po_id": "PO-822",
+      "total_minor": 72000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_069.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-070",
+      "vendor_id": "V-1012",
+      "po_id": "PO-823",
+      "total_minor": 73000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_070.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-071",
+      "vendor_id": "V-1001",
+      "po_id": "PO-824",
+      "total_minor": 74000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_071.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-072",
+      "vendor_id": "V-1002",
+      "po_id": "PO-825",
+      "total_minor": 75000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_072.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-073",
+      "vendor_id": "V-1003",
+      "po_id": "PO-826",
+      "total_minor": 76000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_073.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-074",
+      "vendor_id": "V-1004",
+      "po_id": "PO-827",
+      "total_minor": 77000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_074.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-075",
+      "vendor_id": "V-1005",
+      "po_id": "PO-828",
+      "total_minor": 78000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_075.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-076",
+      "vendor_id": "V-1006",
+      "po_id": "PO-829",
+      "total_minor": 79000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_076.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-077",
+      "vendor_id": "V-1007",
+      "po_id": "PO-830",
+      "total_minor": 80000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_077.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-078",
+      "vendor_id": "V-1008",
+      "po_id": "PO-831",
+      "total_minor": 81000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_078.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-079",
+      "vendor_id": "V-1009",
+      "po_id": "PO-832",
+      "total_minor": 82000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_079.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-080",
+      "vendor_id": "V-1010",
+      "po_id": "PO-833",
+      "total_minor": 83000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_080.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-081",
+      "vendor_id": "V-1011",
+      "po_id": "PO-834",
+      "total_minor": 84000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_081.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-082",
+      "vendor_id": "V-1012",
+      "po_id": "PO-835",
+      "total_minor": 85000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_082.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-083",
+      "vendor_id": "V-1001",
+      "po_id": "PO-836",
+      "total_minor": 86000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_083.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-084",
+      "vendor_id": "V-1002",
+      "po_id": "PO-837",
+      "total_minor": 87000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_084.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-085",
+      "vendor_id": "V-1003",
+      "po_id": "PO-838",
+      "total_minor": 88000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_085.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-086",
+      "vendor_id": "V-1004",
+      "po_id": "PO-839",
+      "total_minor": 89000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_086.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-087",
+      "vendor_id": "V-1005",
+      "po_id": "PO-840",
+      "total_minor": 90000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_087.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-088",
+      "vendor_id": "V-1006",
+      "po_id": "PO-841",
+      "total_minor": 91000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_088.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-089",
+      "vendor_id": "V-1007",
+      "po_id": "PO-842",
+      "total_minor": 92000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_089.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-090",
+      "vendor_id": "V-1008",
+      "po_id": "PO-843",
+      "total_minor": 93000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_090.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-091",
+      "vendor_id": "V-1009",
+      "po_id": "PO-844",
+      "total_minor": 94000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_091.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-092",
+      "vendor_id": "V-1010",
+      "po_id": "PO-845",
+      "total_minor": 95000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_092.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-093",
+      "vendor_id": "V-1011",
+      "po_id": "PO-846",
+      "total_minor": 96000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_093.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-094",
+      "vendor_id": "V-1012",
+      "po_id": "PO-847",
+      "total_minor": 97000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_094.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-095",
+      "vendor_id": "V-1001",
+      "po_id": "PO-848",
+      "total_minor": 98000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_095.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-096",
+      "vendor_id": "V-1002",
+      "po_id": "PO-801",
+      "total_minor": 51000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_096.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-097",
+      "vendor_id": "V-1003",
+      "po_id": "PO-802",
+      "total_minor": 52000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_097.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-098",
+      "vendor_id": "V-1004",
+      "po_id": "PO-803",
+      "total_minor": 53000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_098.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-099",
+      "vendor_id": "V-1005",
+      "po_id": "PO-804",
+      "total_minor": 54000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_099.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-100",
+      "vendor_id": "V-1006",
+      "po_id": "PO-805",
+      "total_minor": 55000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_100.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-101",
+      "vendor_id": "V-1007",
+      "po_id": "PO-806",
+      "total_minor": 56000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_101.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-102",
+      "vendor_id": "V-1008",
+      "po_id": "PO-807",
+      "total_minor": 57000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_102.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-103",
+      "vendor_id": "V-1009",
+      "po_id": "PO-808",
+      "total_minor": 58000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_103.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-104",
+      "vendor_id": "V-1010",
+      "po_id": "PO-809",
+      "total_minor": 59000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_104.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-105",
+      "vendor_id": "V-1011",
+      "po_id": "PO-810",
+      "total_minor": 60000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_105.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-106",
+      "vendor_id": "V-1012",
+      "po_id": "PO-811",
+      "total_minor": 61000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_106.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-107",
+      "vendor_id": "V-1001",
+      "po_id": "PO-812",
+      "total_minor": 62000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_107.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-108",
+      "vendor_id": "V-1002",
+      "po_id": "PO-813",
+      "total_minor": 63000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_108.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-109",
+      "vendor_id": "V-1003",
+      "po_id": "PO-814",
+      "total_minor": 64000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_109.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-110",
+      "vendor_id": "V-1004",
+      "po_id": "PO-815",
+      "total_minor": 65000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_110.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-111",
+      "vendor_id": "V-1005",
+      "po_id": "PO-816",
+      "total_minor": 66000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_111.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-112",
+      "vendor_id": "V-1006",
+      "po_id": "PO-817",
+      "total_minor": 67000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_112.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-113",
+      "vendor_id": "V-1007",
+      "po_id": "PO-818",
+      "total_minor": 68000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_113.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-114",
+      "vendor_id": "V-1008",
+      "po_id": "PO-819",
+      "total_minor": 69000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_114.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-115",
+      "vendor_id": "V-1009",
+      "po_id": "PO-820",
+      "total_minor": 70000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_115.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-116",
+      "vendor_id": "V-1010",
+      "po_id": "PO-821",
+      "total_minor": 71000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_116.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-117",
+      "vendor_id": "V-1011",
+      "po_id": "PO-822",
+      "total_minor": 72000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_117.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-118",
+      "vendor_id": "V-1012",
+      "po_id": "PO-823",
+      "total_minor": 73000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_118.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-119",
+      "vendor_id": "V-1001",
+      "po_id": "PO-824",
+      "total_minor": 74000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_119.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-120",
+      "vendor_id": "V-1002",
+      "po_id": "PO-825",
+      "total_minor": 75000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_120.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-121",
+      "vendor_id": "V-1003",
+      "po_id": "PO-826",
+      "total_minor": 76000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_121.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-122",
+      "vendor_id": "V-1004",
+      "po_id": "PO-827",
+      "total_minor": 77000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_122.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-123",
+      "vendor_id": "V-1005",
+      "po_id": "PO-828",
+      "total_minor": 78000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_123.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-124",
+      "vendor_id": "V-1006",
+      "po_id": "PO-829",
+      "total_minor": 79000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_124.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-125",
+      "vendor_id": "V-1007",
+      "po_id": "PO-830",
+      "total_minor": 80000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_125.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-126",
+      "vendor_id": "V-1008",
+      "po_id": "PO-831",
+      "total_minor": 81000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_126.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-127",
+      "vendor_id": "V-1009",
+      "po_id": "PO-832",
+      "total_minor": 82000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_127.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-128",
+      "vendor_id": "V-1010",
+      "po_id": "PO-833",
+      "total_minor": 83000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_128.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-129",
+      "vendor_id": "V-1011",
+      "po_id": "PO-834",
+      "total_minor": 84000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_129.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-130",
+      "vendor_id": "V-1012",
+      "po_id": "PO-835",
+      "total_minor": 85000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_130.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-131",
+      "vendor_id": "V-1001",
+      "po_id": "PO-836",
+      "total_minor": 86000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_131.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-132",
+      "vendor_id": "V-1002",
+      "po_id": "PO-837",
+      "total_minor": 87000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_132.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-133",
+      "vendor_id": "V-1003",
+      "po_id": "PO-838",
+      "total_minor": 88000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_133.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-134",
+      "vendor_id": "V-1004",
+      "po_id": "PO-839",
+      "total_minor": 89000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_134.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-135",
+      "vendor_id": "V-1005",
+      "po_id": "PO-840",
+      "total_minor": 90000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_135.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-136",
+      "vendor_id": "V-1006",
+      "po_id": "PO-841",
+      "total_minor": 91000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_136.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-137",
+      "vendor_id": "V-1007",
+      "po_id": "PO-842",
+      "total_minor": 92000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_137.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-138",
+      "vendor_id": "V-1008",
+      "po_id": "PO-843",
+      "total_minor": 93000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_138.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-139",
+      "vendor_id": "V-1009",
+      "po_id": "PO-844",
+      "total_minor": 94000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_139.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-140",
+      "vendor_id": "V-1010",
+      "po_id": "PO-845",
+      "total_minor": 95000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_140.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-141",
+      "vendor_id": "V-1011",
+      "po_id": "PO-846",
+      "total_minor": 96000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_141.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-142",
+      "vendor_id": "V-1012",
+      "po_id": "PO-847",
+      "total_minor": 97000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_142.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-143",
+      "vendor_id": "V-1001",
+      "po_id": "PO-848",
+      "total_minor": 98000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_143.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-144",
+      "vendor_id": "V-1002",
+      "po_id": "PO-801",
+      "total_minor": 51000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_144.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-145",
+      "vendor_id": "V-1003",
+      "po_id": "PO-802",
+      "total_minor": 52000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_145.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-146",
+      "vendor_id": "V-1004",
+      "po_id": "PO-803",
+      "total_minor": 53000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_146.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-147",
+      "vendor_id": "V-1005",
+      "po_id": "PO-804",
+      "total_minor": 54000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_147.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-148",
+      "vendor_id": "V-1006",
+      "po_id": "PO-805",
+      "total_minor": 55000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_148.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-149",
+      "vendor_id": "V-1007",
+      "po_id": "PO-806",
+      "total_minor": 56000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_149.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-150",
+      "vendor_id": "V-1008",
+      "po_id": "PO-807",
+      "total_minor": 57000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_150.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-151",
+      "vendor_id": "V-1009",
+      "po_id": "PO-808",
+      "total_minor": 58000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_151.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-152",
+      "vendor_id": "V-1010",
+      "po_id": "PO-809",
+      "total_minor": 59000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_152.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-153",
+      "vendor_id": "V-1011",
+      "po_id": "PO-810",
+      "total_minor": 60000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_153.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-154",
+      "vendor_id": "V-1012",
+      "po_id": "PO-811",
+      "total_minor": 61000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_154.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-155",
+      "vendor_id": "V-1001",
+      "po_id": "PO-812",
+      "total_minor": 62000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_155.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-156",
+      "vendor_id": "V-1002",
+      "po_id": "PO-813",
+      "total_minor": 63000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_156.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-157",
+      "vendor_id": "V-1003",
+      "po_id": "PO-814",
+      "total_minor": 64000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_157.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-158",
+      "vendor_id": "V-1004",
+      "po_id": "PO-815",
+      "total_minor": 65000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_158.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-159",
+      "vendor_id": "V-1005",
+      "po_id": "PO-816",
+      "total_minor": 66000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_159.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-160",
+      "vendor_id": "V-1006",
+      "po_id": "PO-817",
+      "total_minor": 67000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_160.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-161",
+      "vendor_id": "V-1007",
+      "po_id": "PO-818",
+      "total_minor": 68000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_161.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-162",
+      "vendor_id": "V-1008",
+      "po_id": "PO-819",
+      "total_minor": 69000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_162.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-163",
+      "vendor_id": "V-1009",
+      "po_id": "PO-820",
+      "total_minor": 70000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_163.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-164",
+      "vendor_id": "V-1010",
+      "po_id": "PO-821",
+      "total_minor": 71000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_164.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-165",
+      "vendor_id": "V-1011",
+      "po_id": "PO-822",
+      "total_minor": 72000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_165.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-166",
+      "vendor_id": "V-1012",
+      "po_id": "PO-823",
+      "total_minor": 73000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_166.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-167",
+      "vendor_id": "V-1001",
+      "po_id": "PO-824",
+      "total_minor": 74000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_167.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-168",
+      "vendor_id": "V-1002",
+      "po_id": "PO-825",
+      "total_minor": 75000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_168.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-169",
+      "vendor_id": "V-1003",
+      "po_id": "PO-826",
+      "total_minor": 76000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_169.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-170",
+      "vendor_id": "V-1004",
+      "po_id": "PO-827",
+      "total_minor": 77000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_170.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-171",
+      "vendor_id": "V-1005",
+      "po_id": "PO-828",
+      "total_minor": 78000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_171.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-172",
+      "vendor_id": "V-1006",
+      "po_id": "PO-829",
+      "total_minor": 79000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_172.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-173",
+      "vendor_id": "V-1007",
+      "po_id": "PO-830",
+      "total_minor": 80000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_173.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-174",
+      "vendor_id": "V-1008",
+      "po_id": "PO-831",
+      "total_minor": 81000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_174.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-175",
+      "vendor_id": "V-1009",
+      "po_id": "PO-832",
+      "total_minor": 82000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_175.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-176",
+      "vendor_id": "V-1010",
+      "po_id": "PO-833",
+      "total_minor": 83000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_176.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-177",
+      "vendor_id": "V-1011",
+      "po_id": "PO-834",
+      "total_minor": 84000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_177.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-178",
+      "vendor_id": "V-1012",
+      "po_id": "PO-835",
+      "total_minor": 85000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_178.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-179",
+      "vendor_id": "V-1001",
+      "po_id": "PO-836",
+      "total_minor": 86000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_179.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-180",
+      "vendor_id": "V-1002",
+      "po_id": "PO-837",
+      "total_minor": 87000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_180.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-181",
+      "vendor_id": "V-1003",
+      "po_id": "PO-838",
+      "total_minor": 88000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_181.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-182",
+      "vendor_id": "V-1004",
+      "po_id": "PO-839",
+      "total_minor": 89000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_182.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-183",
+      "vendor_id": "V-1005",
+      "po_id": "PO-840",
+      "total_minor": 90000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_183.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-184",
+      "vendor_id": "V-1006",
+      "po_id": "PO-841",
+      "total_minor": 91000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_184.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-185",
+      "vendor_id": "V-1007",
+      "po_id": "PO-842",
+      "total_minor": 92000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_185.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-186",
+      "vendor_id": "V-1008",
+      "po_id": "PO-843",
+      "total_minor": 93000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_186.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-187",
+      "vendor_id": "V-1009",
+      "po_id": "PO-844",
+      "total_minor": 94000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_187.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-188",
+      "vendor_id": "V-1010",
+      "po_id": "PO-845",
+      "total_minor": 95000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_188.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-189",
+      "vendor_id": "V-1011",
+      "po_id": "PO-846",
+      "total_minor": 96000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_189.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-190",
+      "vendor_id": "V-1012",
+      "po_id": "PO-847",
+      "total_minor": 97000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_190.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-191",
+      "vendor_id": "V-1001",
+      "po_id": "PO-848",
+      "total_minor": 98000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_191.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-192",
+      "vendor_id": "V-1002",
+      "po_id": "PO-801",
+      "total_minor": 51000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_192.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-193",
+      "vendor_id": "V-1003",
+      "po_id": "PO-802",
+      "total_minor": 52000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_193.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-194",
+      "vendor_id": "V-1004",
+      "po_id": "PO-803",
+      "total_minor": 53000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_194.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-195",
+      "vendor_id": "V-1005",
+      "po_id": "PO-804",
+      "total_minor": 54000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_195.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-196",
+      "vendor_id": "V-1006",
+      "po_id": "PO-805",
+      "total_minor": 55000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_196.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-197",
+      "vendor_id": "V-1007",
+      "po_id": "PO-806",
+      "total_minor": 56000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_197.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-198",
+      "vendor_id": "V-1008",
+      "po_id": "PO-807",
+      "total_minor": 57000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_198.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-199",
+      "vendor_id": "V-1009",
+      "po_id": "PO-808",
+      "total_minor": 58000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_199.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-200",
+      "vendor_id": "V-1010",
+      "po_id": "PO-809",
+      "total_minor": 59000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_200.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-201",
+      "vendor_id": "V-1011",
+      "po_id": "PO-810",
+      "total_minor": 60000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_201.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-202",
+      "vendor_id": "V-1012",
+      "po_id": "PO-811",
+      "total_minor": 61000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_202.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-203",
+      "vendor_id": "V-1001",
+      "po_id": "PO-812",
+      "total_minor": 62000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_203.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-204",
+      "vendor_id": "V-1002",
+      "po_id": "PO-813",
+      "total_minor": 63000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_204.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-205",
+      "vendor_id": "V-1003",
+      "po_id": "PO-814",
+      "total_minor": 64000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_205.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-206",
+      "vendor_id": "V-1004",
+      "po_id": "PO-815",
+      "total_minor": 65000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_206.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-207",
+      "vendor_id": "V-1005",
+      "po_id": "PO-816",
+      "total_minor": 66000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_207.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-208",
+      "vendor_id": "V-1006",
+      "po_id": "PO-817",
+      "total_minor": 67000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_208.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-209",
+      "vendor_id": "V-1007",
+      "po_id": "PO-818",
+      "total_minor": 68000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_209.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-210",
+      "vendor_id": "V-1008",
+      "po_id": "PO-819",
+      "total_minor": 69000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_210.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-211",
+      "vendor_id": "V-1009",
+      "po_id": "PO-820",
+      "total_minor": 70000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_211.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CLN-212",
+      "vendor_id": "V-1010",
+      "po_id": "PO-821",
+      "total_minor": 71000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/clean/inv_212.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-001",
+      "vendor_id": "V-1001",
+      "po_id": "PO-812",
+      "total_minor": 62050000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_001.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-002",
+      "vendor_id": "V-1002",
+      "po_id": "PO-813",
+      "total_minor": 63100000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_002.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-003",
+      "vendor_id": "V-1003",
+      "po_id": "PO-814",
+      "total_minor": 64150000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_003.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-004",
+      "vendor_id": "V-1004",
+      "po_id": "PO-815",
+      "total_minor": 65200000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_004.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-005",
+      "vendor_id": "V-1005",
+      "po_id": "PO-816",
+      "total_minor": 66250000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_005.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-006",
+      "vendor_id": "V-1006",
+      "po_id": "PO-817",
+      "total_minor": 67300000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_006.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-007",
+      "vendor_id": "V-1007",
+      "po_id": "PO-818",
+      "total_minor": 68350000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_007.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-008",
+      "vendor_id": "V-1008",
+      "po_id": "PO-819",
+      "total_minor": 69400000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_008.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-009",
+      "vendor_id": "V-1009",
+      "po_id": "PO-820",
+      "total_minor": 70450000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_009.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-010",
+      "vendor_id": "V-1010",
+      "po_id": "PO-821",
+      "total_minor": 71500000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_010.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-011",
+      "vendor_id": "V-1011",
+      "po_id": "PO-822",
+      "total_minor": 72550000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_011.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-012",
+      "vendor_id": "V-1012",
+      "po_id": "PO-823",
+      "total_minor": 73600000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_012.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-013",
+      "vendor_id": "V-1001",
+      "po_id": "PO-824",
+      "total_minor": 74650000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_013.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-014",
+      "vendor_id": "V-1002",
+      "po_id": "PO-825",
+      "total_minor": 75700000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_014.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-015",
+      "vendor_id": "V-1003",
+      "po_id": "PO-826",
+      "total_minor": 76750000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_015.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-016",
+      "vendor_id": "V-1004",
+      "po_id": "PO-827",
+      "total_minor": 77800000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_016.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-017",
+      "vendor_id": "V-1005",
+      "po_id": "PO-828",
+      "total_minor": 78850000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_017.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-018",
+      "vendor_id": "V-1006",
+      "po_id": "PO-829",
+      "total_minor": 79900000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_018.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-019",
+      "vendor_id": "V-1007",
+      "po_id": "PO-830",
+      "total_minor": 80950000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_019.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-020",
+      "vendor_id": "V-1008",
+      "po_id": "PO-831",
+      "total_minor": 82000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_020.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-021",
+      "vendor_id": "V-1009",
+      "po_id": "PO-832",
+      "total_minor": 83050000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_021.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-022",
+      "vendor_id": "V-1010",
+      "po_id": "PO-833",
+      "total_minor": 84100000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_022.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-023",
+      "vendor_id": "V-1011",
+      "po_id": "PO-834",
+      "total_minor": 85150000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_023.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-024",
+      "vendor_id": "V-1012",
+      "po_id": "PO-835",
+      "total_minor": 86200000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_024.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-025",
+      "vendor_id": "V-1001",
+      "po_id": "PO-836",
+      "total_minor": 87250000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_025.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-MIS-026",
+      "vendor_id": "V-1002",
+      "po_id": "PO-837",
+      "total_minor": 88300000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/mismatch/inv_026.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-CRIT-001",
+      "vendor_id": "V-1002",
+      "po_id": "PO-801",
+      "total_minor": 153000000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/critical/inv_crit_001.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    },
+    {
+      "invoice_id": "INV-POISON-001",
+      "vendor_id": "V-1001",
+      "po_id": "PO-801",
+      "total_minor": 74200000,
+      "currency": "INR",
+      "status": "pending",
+      "document_uri": "gs://df-invoices/poisoned/inv_poison_001.pdf",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    }
+  ],
+  "payment_batches": [
+    {
+      "batch_id": "PB-88",
+      "task_id": "task_demo_1001",
+      "total_minor": 74200000,
+      "currency": "INR",
+      "status": "approved",
+      "created_at": "2026-08-20T10:00:00+00:00"
+    }
+  ]
+}

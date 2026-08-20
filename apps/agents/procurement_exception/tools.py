@@ -1,10 +1,4 @@
-"""Invoice Reconciliation Agent tools.
-
-CRITICAL RULE: Tools never connect directly to Cloud SQL or production DB.
-Every tool:
-1. Calls Control Plane: POST /v1/grants/evaluate
-2. Calls Execution Gateway: POST /v1/execute with Bearer <ExecutionGrant>
-"""
+"""Procurement Exception Agent tools."""
 
 from __future__ import annotations
 
@@ -13,7 +7,7 @@ from typing import Any
 from httpx import AsyncClient
 
 
-class InvoiceReconciliationTools:
+class ProcurementExceptionTools:
     def __init__(
         self,
         control_plane_client: AsyncClient,
@@ -25,11 +19,10 @@ class InvoiceReconciliationTools:
         self.gw = execution_gateway_client
         self.task_id = task_id
         self.delegation_id = delegation_id
-        self.agent_id = "invoice-reconciliation"
+        self.agent_id = "procurement-exception"
         self.agent_version = "1.0.0"
 
     async def _evaluate_and_execute(self, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Core protected-call pattern."""
         grant_resp = await self.cp.post(
             "/v1/grants/evaluate",
             json={
@@ -56,16 +49,11 @@ class InvoiceReconciliationTools:
         res = exec_resp.json().get("result", {})
         return dict(res) if isinstance(res, dict) else {}
 
-    async def read_invoice(self, invoice_id: str) -> dict[str, Any]:
-        return await self._evaluate_and_execute("invoice.read", {"invoice_id": invoice_id})
+    async def read_vendor(self, vendor_id: str) -> dict[str, Any]:
+        return await self._evaluate_and_execute("vendor.read", {"vendor_id": vendor_id})
 
-    async def read_purchase_order(self, po_id: str) -> dict[str, Any]:
-        return await self._evaluate_and_execute("purchase_order.read", {"po_id": po_id})
-
-    async def write_reconciliation(
-        self, invoice_id: str, result: str, variance_minor: int
-    ) -> dict[str, Any]:
+    async def write_exception(self, invoice_id: str, severity: str, reason: str) -> dict[str, Any]:
         return await self._evaluate_and_execute(
-            "reconciliation.write",
-            {"invoice_id": invoice_id, "result": result, "variance_minor": variance_minor},
+            "exception.write",
+            {"invoice_id": invoice_id, "severity": severity, "reason": reason},
         )

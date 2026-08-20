@@ -127,9 +127,7 @@ class MemoryStore:
         async with self._lock:
             if event_id in self.event_receipts:
                 self.event_receipts[event_id]["status"] = "complete"
-                self.event_receipts[event_id]["completed_at"] = datetime.now(
-                    UTC
-                ).isoformat()
+                self.event_receipts[event_id]["completed_at"] = datetime.now(UTC).isoformat()
 
     # ─── Audit Events Chain ────────────────────────────────────────────────────
 

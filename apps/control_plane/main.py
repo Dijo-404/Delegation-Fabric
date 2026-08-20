@@ -312,9 +312,17 @@ def create_app(
         elif req.tool == "payment.instruct":
             allowed_response_fields = ["payment_id", "status", "processed_at"]
             arg_constraints = [
-                Constraint(path="batch_id", op=ConstraintOp.EQ, value=req.arguments.get("batch_id")),
-                Constraint(path="amount_minor", op=ConstraintOp.LTE, value=req.arguments.get("amount_minor")),
-                Constraint(path="currency", op=ConstraintOp.EQ, value=req.arguments.get("currency")),
+                Constraint(
+                    path="batch_id", op=ConstraintOp.EQ, value=req.arguments.get("batch_id")
+                ),
+                Constraint(
+                    path="amount_minor",
+                    op=ConstraintOp.LTE,
+                    value=req.arguments.get("amount_minor"),
+                ),
+                Constraint(
+                    path="currency", op=ConstraintOp.EQ, value=req.arguments.get("currency")
+                ),
             ]
 
         # Phase H: Pre-evaluate constraints against current arguments
@@ -390,9 +398,7 @@ def create_app(
     ) -> dict[str, Any]:
         now = datetime.now(UTC)
         approval_id = f"apr_{ulid.ULID()}"
-        expires_at = datetime.fromtimestamp(
-            now.timestamp() + req.expires_in_seconds, tz=UTC
-        )
+        expires_at = datetime.fromtimestamp(now.timestamp() + req.expires_in_seconds, tz=UTC)
         approver = x_authenticated_user or "user:arun@example.com"
 
         subject_canonical = canonical_json(req.subject)

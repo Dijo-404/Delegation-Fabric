@@ -6,12 +6,11 @@ Proves the two critical hackathon attack containment properties:
 """
 
 import pytest
+from delegation_fabric_adapters.firestore.store import MemoryStore
+from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner
 from httpx import ASGITransport, AsyncClient
 
 from apps.control_plane.main import create_app as create_control_plane
-from apps.execution_gateway.main import create_app as create_execution_gateway
-from delegation_fabric_adapters.firestore.store import MemoryStore
-from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner
 
 
 @pytest.fixture
@@ -44,7 +43,9 @@ async def test_attack_1_prompt_injection_denied(
     """
     cp_app = create_control_plane(store=shared_store, signer=kms_signer)
 
-    async with AsyncClient(transport=ASGITransport(app=cp_app), base_url="http://cp.test") as cp_client:
+    async with AsyncClient(
+        transport=ASGITransport(app=cp_app), base_url="http://cp.test"
+    ) as cp_client:
         # Create active delegation
         del_resp = await cp_client.post(
             "/v1/delegations",
@@ -91,7 +92,9 @@ async def test_attack_2_cross_agent_escalation_denied(
     """
     cp_app = create_control_plane(store=shared_store, signer=kms_signer)
 
-    async with AsyncClient(transport=ASGITransport(app=cp_app), base_url="http://cp.test") as cp_client:
+    async with AsyncClient(
+        transport=ASGITransport(app=cp_app), base_url="http://cp.test"
+    ) as cp_client:
         del_resp = await cp_client.post(
             "/v1/delegations",
             json={

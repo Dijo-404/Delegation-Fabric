@@ -1,6 +1,5 @@
 """Integration tests for Control Plane, KMS, and Execution Gateway lifecycle."""
 
-
 import pytest
 from delegation_fabric_adapters.firestore.store import MemoryStore
 from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner
