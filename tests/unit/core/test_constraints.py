@@ -118,6 +118,80 @@ def test_get_nested_value_basic(sample_arguments):
             False,
             ReasonCode.ARGUMENT_CONSTRAINT_FAILED,
         ),
+        # ─── Extended matrix (PLAN Day 1 gate: 60+ table-driven rows) ──────────
+        # EQ extended
+        (ConstraintOp.EQ, "vendor.country", "IN", True, None),
+        (ConstraintOp.EQ, "vendor.country", "US", False, ReasonCode.ARGUMENT_CONSTRAINT_FAILED),
+        (ConstraintOp.EQ, "missing.path", "x", False, ReasonCode.ARGUMENT_PATH_UNKNOWN),
+        (ConstraintOp.EQ, "tags", ["urgent"], False, ReasonCode.ARGUMENT_CONSTRAINT_FAILED),
+        (ConstraintOp.EQ, "tags", ["urgent", "q3_settlement"], True, None),
+        (ConstraintOp.EQ, "recipients.0.name", "Accounts", True, None),
+        (
+            ConstraintOp.EQ,
+            "recipients.0.name",
+            "Billing",
+            False,
+            ReasonCode.ARGUMENT_CONSTRAINT_FAILED,
+        ),
+        (ConstraintOp.EQ, "amount_minor", 74_200_000.0, True, None),
+        (ConstraintOp.EQ, "is_active", False, False, ReasonCode.ARGUMENT_CONSTRAINT_FAILED),
+        # NEQ extended
+        (ConstraintOp.NEQ, "vendor.country", "US", True, None),
+        (ConstraintOp.NEQ, "invoice_id", "INV-042", False, ReasonCode.ARGUMENT_CONSTRAINT_FAILED),
+        (ConstraintOp.NEQ, "missing.path", "x", False, ReasonCode.ARGUMENT_PATH_UNKNOWN),
+        # IN / NOT_IN extended
+        (ConstraintOp.IN, "vendor.country", ["IN", "SG"], True, None),
+        (ConstraintOp.IN, "vendor.id", ["V-1001", "V-1002"], True, None),
+        (ConstraintOp.IN, "vendor.id", ["V-9999"], False, ReasonCode.ARGUMENT_CONSTRAINT_FAILED),
+        (ConstraintOp.NOT_IN, "vendor.country", ["PK", "CN"], True, None),
+        (ConstraintOp.IN, "missing.path", ["x"], False, ReasonCode.ARGUMENT_PATH_UNKNOWN),
+        # LT/LTE/GT/GTE boundary semantics
+        (ConstraintOp.LT, "amount_minor", 74200001, True, None),
+        (ConstraintOp.LTE, "amount_minor", 74200001, True, None),
+        (ConstraintOp.GT, "amount_minor", 74199999, True, None),
+        (ConstraintOp.GTE, "amount_minor", 74199999, True, None),
+        (ConstraintOp.LT, "currency", 5, False, ReasonCode.ARGUMENT_TYPE_MISMATCH),
+        (ConstraintOp.GTE, "vendor.id", 5, False, ReasonCode.ARGUMENT_TYPE_MISMATCH),
+        (ConstraintOp.GT, "missing.path", 1, False, ReasonCode.ARGUMENT_PATH_UNKNOWN),
+        # PREFIX extended
+        (ConstraintOp.PREFIX, "invoice_id", "INV-0", True, None),
+        (ConstraintOp.PREFIX, "invoice_id", "", True, None),
+        (ConstraintOp.PREFIX, "vendor.id", "V-", True, None),
+        (ConstraintOp.PREFIX, "vendor.id", "X-", False, ReasonCode.ARGUMENT_CONSTRAINT_FAILED),
+        (ConstraintOp.PREFIX, "missing.path", "x", False, ReasonCode.ARGUMENT_PATH_UNKNOWN),
+        # SUBSET_OF extended
+        (ConstraintOp.SUBSET_OF, "tags", ["urgent", "q3_settlement", "finance", "x"], True, None),
+        (ConstraintOp.SUBSET_OF, "tags", [], False, ReasonCode.ARGUMENT_CONSTRAINT_FAILED),
+        (ConstraintOp.SUBSET_OF, "tags", "urgent", False, ReasonCode.ARGUMENT_TYPE_MISMATCH),
+        (ConstraintOp.SUBSET_OF, "missing.path", ["a"], False, ReasonCode.ARGUMENT_PATH_UNKNOWN),
+        # MATCHES extended
+        (ConstraintOp.MATCHES, "vendor.id", r"^V-\d{4}$", True, None),
+        (
+            ConstraintOp.MATCHES,
+            "invoice_id",
+            r"^inv-\d+$",
+            False,
+            ReasonCode.ARGUMENT_CONSTRAINT_FAILED,
+        ),
+        (ConstraintOp.MATCHES, "currency", r"^IN", True, None),
+        (ConstraintOp.MATCHES, "missing.path", r"^x$", False, ReasonCode.ARGUMENT_PATH_UNKNOWN),
+        # EXISTS extended
+        (ConstraintOp.EXISTS, "amount_minor", None, True, None),
+        (ConstraintOp.EXISTS, "recipients.0.domain", None, True, None),
+        (
+            ConstraintOp.EXISTS,
+            "recipients.9.domain",
+            None,
+            False,
+            ReasonCode.ARGUMENT_CONSTRAINT_FAILED,
+        ),
+        (
+            ConstraintOp.EXISTS,
+            "totally.missing.deep.path",
+            None,
+            False,
+            ReasonCode.ARGUMENT_CONSTRAINT_FAILED,
+        ),
     ],
 )
 def test_individual_operators(sample_arguments, op, path, value, expected_allowed, expected_reason):

@@ -54,3 +54,11 @@ class AuditChainError(DelegationFabricError):
     def __init__(self, index: int, reason: str) -> None:
         self.index = index
         super().__init__(f"Chain broken at index {index}: {reason}")
+
+
+class ConcurrentTaskUpdateError(DelegationFabricError):
+    """Raised when a task was modified concurrently (optimistic CAS mismatch)."""
+
+
+class TaskNotFoundError(DelegationFabricError):
+    """Raised when the referenced task does not exist."""

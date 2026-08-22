@@ -36,6 +36,9 @@ class ApprovalRecord(BaseModel):
     expires_at: datetime
     policy_version: str = ""
 
+    # Single-use binding: set to the grant_id that consumed this approval.
+    used_by_grant_id: str | None = None
+
     def is_valid(self, now: datetime) -> bool:
         """Check if approval is still within its validity window."""
         return self.decision == ApprovalDecision.APPROVED and self.expires_at > now

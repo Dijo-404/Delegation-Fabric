@@ -60,8 +60,8 @@ def compute_event_hash(prev_hash: str, event_data_without_hash: dict[str, Any]) 
 
 def finalize_audit_event(event: AuditEvent, prev_hash: str) -> AuditEvent:
     """Compute and attach event_hash to an AuditEvent instance."""
-    event_dict = event.model_dump(mode="json")
     event.prev_hash = prev_hash
+    event_dict = event.model_dump(mode="json")
     event.event_hash = compute_event_hash(prev_hash, event_dict)
     return event
 

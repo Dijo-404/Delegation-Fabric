@@ -65,7 +65,7 @@ def _project_recursive(
         result_list = []
         total_dropped = 0
         for item in data:
-            if isinstance(item, (dict, list)):
+            if isinstance(item, dict | list):
                 sub_val, sub_dropped = _project_recursive(item, tree)
                 result_list.append(sub_val)
                 total_dropped += sub_dropped
@@ -75,7 +75,8 @@ def _project_recursive(
         return result_list, total_dropped
 
     else:
-        return data, 0
+        # Scalar at a non-leaf path: allow-lists only authorize object shapes.
+        return None, 1
 
 
 def project_fields(
@@ -85,13 +86,17 @@ def project_fields(
     """Project only allowed fields from payload.
 
     If allowed_paths is empty, returns empty object or empty list with dropped count.
+    A scalar root payload never passes an allow-list (fail-closed).
     """
+    if not isinstance(payload, dict | list):
+        if allowed_paths:
+            return ProjectionResult(projected=None, dropped_count=1)
+        return ProjectionResult(projected=None, dropped_count=1)
+
     if not allowed_paths:
         if isinstance(payload, dict):
             return ProjectionResult(projected={}, dropped_count=len(payload))
-        elif isinstance(payload, list):
-            return ProjectionResult(projected=[], dropped_count=len(payload))
-        return ProjectionResult(projected=None, dropped_count=1)
+        return ProjectionResult(projected=[], dropped_count=len(payload))
 
     tree = _build_projection_tree(allowed_paths)
     projected, dropped = _project_recursive(payload, tree)
