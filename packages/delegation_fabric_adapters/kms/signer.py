@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable
 from typing import Any
 
 from cryptography.exceptions import InvalidSignature
@@ -98,12 +99,51 @@ class LocalKMSSigner:
         return f"{header_b64}.{payload_b64}.{signature_b64}"
 
 
-class JWSGrantVerifier:
-    """Verifies JWS Execution Grants against trusted public keys."""
+class CachedKeyResolver:
+    """Resolves kid -> PEM on miss and caches results (key-rotation safe).
 
-    def __init__(self, public_keys_by_kid: dict[str, str] | None = None) -> None:
-        # Map of kid -> PEM public key
-        self._public_keys = public_keys_by_kid or {}
+    A failed resolution is remembered briefly so a flood of bogus kids cannot
+    hammer KMS.
+    """
+
+    def __init__(self, resolver: Callable[[str], str], ttl_seconds: float = 300) -> None:
+        self._resolver = resolver
+        self._ttl = ttl_seconds
+        self._cache: dict[str, tuple[float, str]] = {}
+        self._negative_until: dict[str, float] = {}
+
+    def __call__(self, kid: str) -> str:
+        import time
+
+        now = time.monotonic()
+        hit = self._cache.get(kid)
+        if hit and now - hit[0] < self._ttl:
+            return hit[1]
+        if now < self._negative_until.get(kid, 0.0):
+            raise GrantSignatureError(f"Unknown or untrusted key id (kid): {kid!r}")
+        try:
+            pem = self._resolver(kid)
+        except Exception as e:
+            self._negative_until[kid] = now + 30
+            raise GrantSignatureError(f"Key resolution failed for {kid!r}: {e}") from e
+        self._cache[kid] = (now, pem)
+        return pem
+
+
+class JWSGrantVerifier:
+    """Verifies JWS Execution Grants against trusted public keys.
+
+    An optional ``key_resolver`` lazily resolves unknown ``kid`` values (with
+    caching) so KMS key rotation does not require a gateway restart.
+    """
+
+    def __init__(
+        self,
+        public_keys_by_kid: dict[str, str] | None = None,
+        key_resolver: Callable[[str], str] | None = None,
+    ) -> None:
+        self._public_keys: dict[str, str] = public_keys_by_kid or {}
+        self.key_resolver = key_resolver
 
     def register_public_key(self, kid: str, pem_str: str) -> None:
         self._public_keys[kid] = pem_str
@@ -126,8 +166,22 @@ class JWSGrantVerifier:
         if header.get("alg") != "ES256":
             raise GrantSignatureError(f"Unsupported algorithm {header.get('alg')!r}: must be ES256")
 
+        typ = header.get("typ", "JWT")
+        if typ != "DFG+JWT":
+            raise GrantSignatureError(
+                f"Unexpected token type {typ!r}: must be DFG+JWT (cross-protocol guard)"
+            )
+        crit = header.get("crit")
+        if crit:
+            raise GrantSignatureError("Critical header extensions are not permitted on grants")
+
         kid = header.get("kid")
-        if not kid or kid not in self._public_keys:
+        if not kid:
+            raise GrantSignatureError("Missing key id (kid) in JWS header")
+        if kid not in self._public_keys and self.key_resolver is not None:
+            # Rotation path: resolve, trust-on-first-use, then retry below.
+            self.register_public_key(kid, self.key_resolver(kid))
+        if kid not in self._public_keys:
             raise GrantSignatureError(f"Unknown or untrusted key id (kid): {kid!r}")
 
         pem_str = self._public_keys[kid]

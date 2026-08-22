@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from delegation_fabric_core.errors.exceptions import (
+    ConcurrentTaskUpdateError,
     GrantExpiredError,
     GrantReplayError,
     GrantUnknownError,
+    TaskNotFoundError,
 )
 from delegation_fabric_core.models.approval import ApprovalRecord
 from delegation_fabric_core.models.audit import AuditEvent
@@ -17,7 +20,7 @@ from delegation_fabric_core.models.checkpoint import TaskCheckpoint
 from delegation_fabric_core.models.delegation import Delegation
 from delegation_fabric_core.models.event import EventEnvelope
 from delegation_fabric_core.models.grant import GrantRecord, GrantStatus
-from delegation_fabric_core.models.task import Task, TaskState
+from delegation_fabric_core.models.task import Task
 
 
 class MemoryStore:
@@ -41,7 +44,8 @@ class MemoryStore:
 
     async def get_delegation(self, delegation_id: str) -> Delegation | None:
         async with self._lock:
-            return self.delegations.get(delegation_id)
+            d = self.delegations.get(delegation_id)
+            return d.model_copy() if d else None
 
     # ─── Task CRUD & Transitions ───────────────────────────────────────────────
 
@@ -51,16 +55,35 @@ class MemoryStore:
 
     async def get_task(self, task_id: str) -> Task | None:
         async with self._lock:
-            return self.tasks.get(task_id)
+            task = self.tasks.get(task_id)
+            # Copy-on-read: callers never hold a live reference into the store,
+            # so read-modify-write cycles must go through put_task/mutate_task_atomic.
+            return task.model_copy() if task else None
+
+    async def mutate_task_atomic(
+        self,
+        task_id: str,
+        mutator: Callable[[Task], None],
+        expected_version: int | None = None,
+    ) -> Task:
+        """Apply mutator to the task atomically (lock + optional CAS on state_version)."""
+        async with self._lock:
+            task = self.tasks.get(task_id)
+            if task is None:
+                raise TaskNotFoundError(f"Task {task_id!r} not found")
+            if expected_version is not None and task.state_version != expected_version:
+                raise ConcurrentTaskUpdateError(
+                    f"Task {task_id!r} changed: expected v{expected_version}, "
+                    f"actual v{task.state_version}"
+                )
+            mutator(task)
+            return task
 
     async def put_checkpoint(self, checkpoint: TaskCheckpoint) -> None:
+        # Checkpoints are immutable history records. Task state transitions go
+        # exclusively through mutate_task_atomic (single writer).
         async with self._lock:
             self.checkpoints[checkpoint.checkpoint_id] = checkpoint
-            if checkpoint.task_id in self.tasks:
-                task = self.tasks[checkpoint.task_id]
-                task.latest_checkpoint_id = checkpoint.checkpoint_id
-                task.state = TaskState(checkpoint.state)
-                task.state_version = checkpoint.state_version
 
     async def get_checkpoint(self, checkpoint_id: str) -> TaskCheckpoint | None:
         async with self._lock:
@@ -107,21 +130,58 @@ class MemoryStore:
         async with self._lock:
             return self.approvals.get(approval_id)
 
+    async def list_approvals(self, task_id: str) -> list[ApprovalRecord]:
+        async with self._lock:
+            return [a for a in self.approvals.values() if a.task_id == task_id]
+
     # ─── Event Receipt Idempotency ─────────────────────────────────────────────
 
-    async def reserve_event_receipt(self, envelope: EventEnvelope) -> bool:
-        """Transactionally record event_id. Returns False if already processed."""
+    async def reserve_event_receipt(
+        self,
+        envelope: EventEnvelope,
+        now: datetime | None = None,
+        lease_seconds: int = 300,
+    ) -> bool:
+        """Transactionally record event_id.
+
+        Returns True when processing may proceed (new receipt, or a stale
+        "processing" receipt whose lease has expired). Returns False when the
+        event is already complete or still actively leased.
+        """
+        if now is None:
+            now = datetime.now(UTC)
+
         async with self._lock:
-            if envelope.event_id in self.event_receipts:
+            existing = self.event_receipts.get(envelope.event_id)
+            if existing is None:
+                self.event_receipts[envelope.event_id] = {
+                    "event_id": envelope.event_id,
+                    "event_type": envelope.event_type.value,
+                    "task_id": envelope.task_id,
+                    "status": "processing",
+                    "attempt_count": 1,
+                    "first_seen_at": now.isoformat(),
+                }
+                return True
+
+            if existing.get("status") == "complete":
                 return False
-            self.event_receipts[envelope.event_id] = {
-                "event_id": envelope.event_id,
-                "event_type": envelope.event_type.value,
-                "task_id": envelope.task_id,
-                "status": "processing",
-                "first_seen_at": datetime.now(UTC).isoformat(),
-            }
-            return True
+
+            raw_first_seen = existing.get("first_seen_at")
+            first_seen = (
+                datetime.fromisoformat(raw_first_seen) if isinstance(raw_first_seen, str) else now
+            )
+            if first_seen.tzinfo is None:
+                first_seen = first_seen.replace(tzinfo=UTC)
+
+            age = now - first_seen
+            if age >= timedelta(seconds=lease_seconds):
+                attempt_count = int(existing.get("attempt_count", 1))
+                existing["attempt_count"] = attempt_count + 1
+                existing["first_seen_at"] = now.isoformat()
+                return True
+
+            return False
 
     async def mark_event_complete(self, event_id: str) -> None:
         async with self._lock:
