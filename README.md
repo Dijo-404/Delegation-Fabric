@@ -78,34 +78,15 @@ Delegation Fabric adds a deterministic transaction-authorization primitive that 
 
 Recommended enforcement sequence:
 
-```text
-Agent Runtime
-    |
-    v
-Google Agent Gateway
-    - agent identity
-    - registry routing
-    - IAM
-    - Model Armor
-    - optional Semantic Governance
-    |
-    v
-Delegation Fabric Control Plane
-    - delegation lookup
-    - deterministic policy evaluation
-    - approval/SOD checks
-    - Execution Grant issuance
-    |
-    v
-Delegation Fabric Execution Gateway
-    - signature verification
-    - exact tool binding
-    - argument re-evaluation
-    - single-use consume
-    - field projection
-    |
-    v
-Production adapter / ERP / payment / broker
+```mermaid
+flowchart TD
+    AR["Agent Runtime"]
+    GG["Google Agent Gateway<br/>agent identity · registry routing · IAM · Model Armor · optional Semantic Governance"]
+    CP["Delegation Fabric Control Plane<br/>delegation lookup · deterministic policy evaluation · approval/SOD checks · Execution Grant issuance"]
+    EG["Delegation Fabric Execution Gateway<br/>signature verification · exact tool binding · argument re-evaluation · single-use consume · field projection"]
+    PROD["Production adapter / ERP / payment / broker"]
+
+    AR --> GG --> CP --> EG --> PROD
 ```
 
 Semantic Governance is probabilistic and intent-oriented. Delegation Fabric's final authorization path is deterministic and credential-oriented.
@@ -161,82 +142,69 @@ These invariants must hold even if the model is manipulated.
 
 ### Main workflow
 
-```text
-Finance manager creates delegation
-        |
-        v
-invoice-reconciliation
-        |
-        +--> reads invoice + purchase order
-        |
-        +--> writes reconciliation
-        |
-        +--> mismatch? invoke procurement-exception
-                         |
-                         +--> writes exception
-                         |
-                         +--> critical? await human approval
-                                           |
-                                           v
-                                   treasury-approval
-                                           |
-                                           v
-                                   payment.instruct
+```mermaid
+flowchart TD
+    MGR["Finance manager creates delegation"] --> IR["invoice-reconciliation"]
+    IR --> READ["reads invoice + purchase order"]
+    IR --> WREC["writes reconciliation"]
+    WREC --> Q{"mismatch?"}
+    Q -- "no" --> OK["batch reconciled"]
+    Q -- "yes" --> PE["procurement-exception"]
+    PE --> WEXC["writes exception"]
+    WEXC --> C{"critical?"}
+    C -- "no" --> RESOLVED["exception resolved without payment"]
+    C -- "yes" --> HUMAN["await human approval"]
+    HUMAN --> TA["treasury-approval"]
+    TA --> PAY["payment.instruct"]
 ```
 
 ---
 
 ## 6. Architecture at a glance
 
-```text
-+--------------------------------------------------------------------------------+
-|                           GOVERNANCE / USER PLANE                              |
-|                                                                                |
-|  Next.js Console                                                               |
-|  registry | delegations | tasks | approvals | audit | security                |
-+-------------------------------------+------------------------------------------+
-                                      |
-                                      v
-+--------------------------------------------------------------------------------+
-|                         DELEGATION FABRIC CONTROL PLANE                        |
-|                                                                                |
-|  FastAPI                                                                       |
-|  - create/revoke delegation                                                    |
-|  - resolve agent manifest                                                      |
-|  - deterministic policy evaluation                                            |
-|  - approval + separation-of-duties validation                                  |
-|  - Execution Grant issuance through Cloud KMS                                  |
-+----------------------+-------------------+--------------------+-----------------+
-                       |                   |                    |
-                       v                   v                    v
-                   Firestore           Cloud KMS          Agent Registry
-                workflow metadata     asymmetric sign    version/capability
-                       |
-                       v
-+--------------------------------------------------------------------------------+
-|                            AGENT EXECUTION PLANE                               |
-|                                                                                |
-|  Gemini Enterprise Agent Platform                                              |
-|  Agent Runtime + Sessions + Memory Bank + ADK                                  |
-|                                                                                |
-|  Agent Runtime --> Google Agent Gateway --> Delegation Fabric Execution Gateway |
-|                      identity / IAM         deterministic final authorization   |
-|                      Model Armor                                             |
-|                      Semantic Governance (optional companion)                   |
-+-----------------------------------------------------------+--------------------+
-                                                            |
-                                                            v
-+--------------------------------------------------------------------------------+
-|                              RESOURCE PLANE                                    |
-|                                                                                |
-|  Cloud SQL PostgreSQL | broker tools | simulated payment adapter               |
-|  narrow database roles  | explicit destinations | idempotent side effects      |
-+--------------------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph GOV["GOVERNANCE / USER PLANE"]
+        CONSOLE["Next.js Console<br/>registry · delegations · tasks · approvals · audit · security"]
+    end
 
-Events: Pub/Sub -> Cloud Run worker -> checkpoint/resume
-Audit: Firestore chain -> Cloud Storage retention bucket
-Telemetry: OpenTelemetry -> Cloud Trace / Logging / Monitoring
+    CONSOLE --> API
+
+    subgraph CP["DELEGATION FABRIC CONTROL PLANE"]
+        API["FastAPI<br/>create/revoke delegation · resolve agent manifest<br/>deterministic policy evaluation<br/>approval + separation-of-duties validation<br/>Execution Grant issuance through Cloud KMS"]
+    end
+
+    API --> FS
+    API --> KMS
+    API --> REG
+
+    FS[("Firestore<br/>workflow metadata")]
+    KMS[("Cloud KMS<br/>asymmetric sign")]
+    REG[("Agent Registry<br/>version/capability")]
+
+    subgraph EXEC["AGENT EXECUTION PLANE"]
+        RT["Gemini Enterprise Agent Platform<br/>Agent Runtime · Sessions · Memory Bank · ADK"]
+        GGW["Google Agent Gateway<br/>identity / IAM · Model Armor<br/>Semantic Governance (optional companion)"]
+        XGW["Delegation Fabric Execution Gateway<br/>deterministic final authorization"]
+        RT --> GGW --> XGW
+    end
+
+    XGW --> DB
+    XGW --> TOOLS
+    XGW --> PAY
+
+    subgraph RES["RESOURCE PLANE"]
+        DB[("Cloud SQL PostgreSQL<br/>narrow database roles")]
+        TOOLS["broker tools<br/>explicit destinations"]
+        PAY["simulated payment adapter<br/>idempotent side effects"]
+    end
 ```
+
+Cross-cutting flows:
+
+- Events: Pub/Sub → Cloud Run worker → checkpoint/resume
+- Audit: Firestore chain → Cloud Storage retention bucket
+- Telemetry: OpenTelemetry → Cloud Trace / Logging / Monitoring
 
 ---
 
@@ -340,37 +308,37 @@ delegation-fabric/
 
 ## 10. Main protected-call flow
 
-```text
-Agent decides to call invoice.read(invoice_id="INV-042")
-    |
-    v
-POST /v1/grants/evaluate
-    |
-    +--> load task + delegation
-    +--> resolve agent version/manifest
-    +--> evaluate purpose
-    +--> evaluate deterministic constraints
-    +--> check approval/SOD if required
-    +--> optional: require Semantic Governance ALLOW evidence
-    |
-    v
-KMS signs Execution Grant
-    |
-    v
-POST /v1/execute
-Authorization: Bearer <grant>
-    |
-    +--> verify signature and key id
-    +--> verify time window
-    +--> verify agent/tool/task binding
-    +--> atomically consume grant
-    +--> re-evaluate request arguments
-    +--> execute adapter
-    +--> project response fields
-    +--> append audit event
-    |
-    v
-safe projected response returns to agent
+```mermaid
+flowchart TD
+    A["Agent decides to call<br/>invoice.read(invoice_id=INV-042)"] --> B["POST /v1/grants/evaluate"]
+
+    subgraph CPEVAL["Control Plane — policy evaluation"]
+        direction TB
+        S1["load task + delegation"]
+        S2["resolve agent version / manifest"]
+        S3["evaluate purpose + deterministic constraints"]
+        S4["check approval / separation-of-duties if required"]
+        S5["optional: require Semantic Governance ALLOW evidence"]
+        S1 --> S2 --> S3 --> S4 --> S5
+    end
+
+    B --> CPEVAL
+    CPEVAL --> K["KMS signs Execution Grant"]
+
+    subgraph EGW["Execution Gateway — enforcement"]
+        direction TB
+        E1["verify signature and key id"]
+        E2["verify time window + agent/tool/task binding"]
+        E3["atomically consume grant"]
+        E4["re-evaluate request arguments"]
+        E5["execute adapter"]
+        E6["project response fields"]
+        E7["append audit event"]
+        E1 --> E2 --> E3 --> E4 --> E5 --> E6 --> E7
+    end
+
+    K --> EGW
+    EGW --> OUT["safe projected response returns to agent"]
 ```
 
 ---
@@ -514,15 +482,15 @@ The demo should prove four things, not merely show a dashboard:
 
 Final audit proof:
 
-```text
-source document
-    -> model/tool proposal
-    -> policy decision
-    -> execution grant
-    -> approval record
-    -> tool call
-    -> side effect
-    -> audit hash
+```mermaid
+flowchart LR
+    SRC["source document"] --> PROP["model/tool proposal"]
+    PROP --> DEC["policy decision"]
+    DEC --> GNT["execution grant"]
+    GNT --> APR["approval record"]
+    APR --> CALL["tool call"]
+    CALL --> EFF["side effect"]
+    EFF --> HASH["audit hash"]
 ```
 
 The causal chain should be clickable in the console.
