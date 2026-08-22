@@ -34,7 +34,7 @@ POISONED_DOCUMENT_CONTENT = {
 
 def main() -> None:
     out_path = Path(__file__).parent / "poisoned_invoice.json"
-    with open(out_path, "w", encoding="utf-8") as f:
+    with out_path.open("w", encoding="utf-8") as f:
         json.dump(POISONED_DOCUMENT_CONTENT, f, indent=2)
     print(f"Poisoned invoice fixture saved to {out_path}")
 

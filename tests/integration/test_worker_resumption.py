@@ -65,17 +65,19 @@ async def test_worker_resumption_and_idempotent_duplicate_handling():
             data={"approval_id": "apr_01"},
         )
 
-        # 1. First event push: transitions state awaiting_approval -> resuming and stores checkpoint
+        # 1. First event push: transitions awaiting_approval -> resuming -> running
+        # (true resume: checkpoint restored, RUNTIME_RESTORED applied)
         resp1 = await client.post("/internal/events/pubsub", json=payload)
         assert resp1.status_code == 200
         data1 = resp1.json()
         assert data1["status"] == "processed"
-        assert data1["new_state"] == "resuming"
+        assert data1["new_state"] == "running"
+        assert data1["resume"]["resumed"] is True
 
         updated_task = await store.get_task("task_resume_01")
         assert updated_task is not None
-        assert updated_task.state == TaskState.RESUMING
-        assert updated_task.state_version == 3
+        assert updated_task.state == TaskState.RUNNING
+        assert updated_task.state_version == 4  # awaiting(2) -> resuming(3) -> running(4)
         assert updated_task.latest_checkpoint_id != ""
 
         # 2. Duplicate delivery of same event_id: must return 200 OK with duplicate_ignored without mutating task again
@@ -86,4 +88,4 @@ async def test_worker_resumption_and_idempotent_duplicate_handling():
 
         task_after_dup = await store.get_task("task_resume_01")
         assert task_after_dup is not None
-        assert task_after_dup.state_version == 3  # Unchanged
+        assert task_after_dup.state_version == 4  # Unchanged

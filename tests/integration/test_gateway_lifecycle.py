@@ -103,7 +103,7 @@ async def test_full_grant_evaluation_and_execution_lifecycle(
         assert audit_verify_resp.status_code == 200
         audit_res = audit_verify_resp.json()
         assert audit_res["valid"] is True
-        assert audit_res["event_count"] == 1
+        assert audit_res["events"] == 2
 
 
 @pytest.mark.asyncio

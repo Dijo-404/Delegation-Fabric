@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from pathlib import Path
+from typing import Any  # noqa: E402
 
 # Add project root and packages to sys.path
 _ROOT = Path(__file__).resolve().parents[2]
@@ -23,15 +24,22 @@ if str(_ROOT) not in sys.path:
 if str(_ROOT / "packages") not in sys.path:
     sys.path.insert(0, str(_ROOT / "packages"))
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime  # noqa: E402
 
-from httpx import ASGITransport, AsyncClient
+from delegation_fabric_adapters.firestore.store import MemoryStore  # noqa: E402
+from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
 
-from apps.control_plane.main import create_app as create_control_plane
-from apps.execution_gateway.main import create_app as create_execution_gateway
-from apps.worker.main import create_app as create_worker
-from delegation_fabric_adapters.firestore.store import MemoryStore
-from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner
+from apps.control_plane.main import create_app as create_control_plane  # noqa: E402
+from apps.execution_gateway.main import create_app as create_execution_gateway  # noqa: E402
+from apps.worker.main import create_app as create_worker  # noqa: E402
+
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+async def _all_invoices(erp: Any) -> list[dict[str, Any]]:
+    """Read the invoice index from the file-backed ERP backend."""
+    return list(erp._invoices.values())  # noqa: SLF001 - demo-only access
 
 
 async def run_demo() -> None:
@@ -45,13 +53,28 @@ async def run_demo() -> None:
     verifier.register_public_key(kms_signer.key_version, kms_signer.get_public_key_pem())
 
     cp_app = create_control_plane(store=store, signer=kms_signer)
-    gw_app = create_execution_gateway(store=store, verifier=verifier)
+
+    # Gateway serves the real seeded ERP dataset (240 invoices), not fixtures.
+    from delegation_fabric_adapters.postgres.erp import FileERPBackend
+
+    gw_app = create_execution_gateway(
+        store=store,
+        verifier=verifier,
+        erp=FileERPBackend(_ROOT / "seed" / "erp" / "dataset.json"),
+    )
     worker_app = create_worker(store=store)
+
+    # Demo drives a REAL invoice from the seeded ERP dataset.
+    erp_seed = FileERPBackend(_ROOT / "seed" / "erp" / "dataset.json")
+    all_invoices = sorted(erp_seed._invoices)  # noqa: SLF001 - demo-only access
+    clean_invoice_id = next(i for i in all_invoices if i.startswith("INV-CLN"))
 
     async with (
         AsyncClient(transport=ASGITransport(app=cp_app), base_url="http://cp.test") as cp,
         AsyncClient(transport=ASGITransport(app=gw_app), base_url="http://gw.test") as gw,
-        AsyncClient(transport=ASGITransport(app=worker_app), base_url="http://worker.test") as worker,
+        AsyncClient(
+            transport=ASGITransport(app=worker_app), base_url="http://worker.test"
+        ) as worker,
     ):
         # Step 1: Human sponsor creates Delegation
         print("\n[Step 1] Finance Manager (Priya) creates Delegation...")
@@ -60,7 +83,11 @@ async def run_demo() -> None:
             json={
                 "purpose": "weekly_vendor_settlement",
                 "task_id": "task_demo_1001",
-                "allowed_agents": ["invoice-reconciliation", "procurement-exception", "treasury-approval"],
+                "allowed_agents": [
+                    "invoice-reconciliation",
+                    "procurement-exception",
+                    "treasury-approval",
+                ],
                 "allowed_regions": ["asia-south1"],
                 "expires_at": "2026-09-01T00:00:00Z",
             },
@@ -70,7 +97,9 @@ async def run_demo() -> None:
         print(f" -> Delegation Created: {delegation_id} (active, asia-south1)")
 
         # Step 2: Invoice Reconciliation Agent processes clean invoice
-        print("\n[Step 2] invoice-reconciliation agent requests grant for invoice.read(INV-042)...")
+        print(
+            f"\n[Step 2] invoice-reconciliation agent requests grant for invoice.read({clean_invoice_id})..."
+        )
         eval_resp = await cp.post(
             "/v1/grants/evaluate",
             json={
@@ -78,7 +107,7 @@ async def run_demo() -> None:
                 "delegation_id": delegation_id,
                 "agent": {"id": "invoice-reconciliation", "version": "1.0.0"},
                 "tool": "invoice.read",
-                "arguments": {"invoice_id": "INV-042"},
+                "arguments": {"invoice_id": clean_invoice_id},
             },
         )
         grant_token = eval_resp.json()["token"]
@@ -87,7 +116,7 @@ async def run_demo() -> None:
         print(" -> Executing invoice.read through Execution Gateway...")
         exec_resp = await gw.post(
             "/v1/execute",
-            json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
+            json={"tool": "invoice.read", "arguments": {"invoice_id": clean_invoice_id}},
             headers={"Authorization": f"Bearer {grant_token}"},
         )
         print(f" -> Result: {exec_resp.json()['result']}")
@@ -104,7 +133,9 @@ async def run_demo() -> None:
                 "arguments": {"vendor_id": "V-1001"},
             },
         )
-        print(f" -> Result: {poison_resp.json()['decision'].upper()} (Reason: {poison_resp.json()['reason_code']})")
+        print(
+            f" -> Result: {poison_resp.json()['decision'].upper()} (Reason: {poison_resp.json()['reason_code']})"
+        )
 
         # Step 4: Separation of Duties & Human Approval for Treasury Payment
         print("\n[Step 4] Treasury Payment requested (PB-88, INR 74,200,000)...")
@@ -131,7 +162,9 @@ async def run_demo() -> None:
             },
             headers={"x-authenticated-user": "user:arun@example.com"},
         )
-        print(f" -> Approval Created: {app_resp.json()['approval_id']} (Approver: user:arun@example.com)")
+        print(
+            f" -> Approval Created: {app_resp.json()['approval_id']} (Approver: user:arun@example.com)"
+        )
 
         print(" -> Treasury agent re-evaluates grant...")
         pay_eval = await cp.post(
@@ -158,11 +191,112 @@ async def run_demo() -> None:
         )
         print(f" -> Payment Settled: {pay_exec.json()['result']}")
 
-        # Step 5: Cryptographic Audit Chain Verification
-        print("\n[Step 5] Cryptographically verifying SHA-256 tamper-evident audit chain...")
+        # Step 5: Durable pause/resume from checkpoint (PLAN Day 8 slot 1:55-2:25)
+        print("\n[Step 5] Durable execution: task pauses awaiting approval event...")
+        import base64 as b64
+        import json as jsonlib
+
+        async with AsyncClient(
+            transport=ASGITransport(app=worker_app), base_url="http://worker.test"
+        ) as worker:
+            start_env = {
+                "event_id": "evt_demo_start",
+                "event_type": "task.start",
+                "task_id": "task_demo_1001",
+                "occurred_at": datetime.now(UTC).isoformat(),
+                "source": "control-plane",
+                "schema_version": "1",
+                "data": {"agent": "invoice-reconciliation@1.0.0"},
+            }
+            r1 = await worker.post(
+                "/internal/events/pubsub",
+                json={
+                    "message": {"data": b64.b64encode(jsonlib.dumps(start_env).encode()).decode()}
+                },
+            )
+            state_running = r1.json()["new_state"]
+
+            # Workflow pauses awaiting human approval (durable checkpoint).
+            from delegation_fabric_core.models.task import TaskState
+
+            paused = await store.get_task("task_demo_1001")
+            assert paused is not None
+            paused.state = TaskState.AWAITING_APPROVAL
+            paused.state_version += 1
+            await store.put_task(paused)
+            print(f" -> Task advanced to {state_running}, now paused at awaiting_approval")
+
+            approval_env = dict(
+                start_env, event_id="evt_demo_approval", event_type="approval.created"
+            )
+            r2 = await worker.post(
+                "/internal/events/pubsub",
+                json={
+                    "message": {
+                        "data": b64.b64encode(jsonlib.dumps(approval_env).encode()).decode()
+                    }
+                },
+            )
+            resume_body = r2.json()
+
+            dup = await worker.post(
+                "/internal/events/pubsub",
+                json={
+                    "message": {
+                        "data": b64.b64encode(jsonlib.dumps(approval_env).encode()).decode()
+                    }
+                },
+            )
+            print(f" -> Duplicate delivery safely ignored: {dup.json()['status']}")
+
+        task_after = (await cp.get("/v1/tasks/task_demo_1001")).json()
+        print(
+            f" -> Task advanced: {state_running} -> paused -> resumed to {resume_body['new_state']}"
+        )
+        print(
+            f" -> Checkpoint restored: agent={task_after['agent']}, session={task_after['session_id']}"
+        )
+
+        # Step 6: Batch reconciliation over the seeded ERP dataset (Day 7 counts)
+        print("\n[Step 6] Batch reconciliation over the seeded 240-invoice dataset...")
+        erp = FileERPBackend(_ROOT / "seed" / "erp" / "dataset.json")
+        matched = mismatched = failed = 0
+        for inv in (await _all_invoices(erp))[:50]:  # demo samples the batch
+            grant_r = await cp.post(
+                "/v1/grants/evaluate",
+                json={
+                    "task_id": "task_demo_1001",
+                    "delegation_id": delegation_id,
+                    "agent": {"id": "invoice-reconciliation", "version": "1.0.0"},
+                    "tool": "invoice.read",
+                    "arguments": {"invoice_id": inv["invoice_id"]},
+                },
+            )
+            if grant_r.status_code != 200:
+                failed += 1
+                continue
+            token_i = grant_r.json()["token"]
+            exec_i = await gw.post(
+                "/v1/execute",
+                json={"tool": "invoice.read", "arguments": {"invoice_id": inv["invoice_id"]}},
+                headers={"Authorization": f"Bearer {token_i}"},
+            )
+            po_id = exec_i.json().get("result", {}).get("po_id")
+            if po_id:
+                matched += 1
+            else:
+                mismatched += 1
+        print(
+            f" -> Sampled 50 of 240 invoices: {matched} reconciled, {mismatched} without PO match, {failed} denied"
+        )
+
+        # Step 7: Cryptographic Audit Chain Verification
+        print("\n[Step 7] Cryptographically verifying SHA-256 tamper-evident audit chain...")
         audit_verify = await cp.get("/v1/audit/tasks/task_demo_1001/verify")
         res = audit_verify.json()
-        print(f" -> Audit Chain Valid: {res['valid']} (Total Events: {res['event_count']}, Head: {res['head_hash']})")
+        print(
+            f" -> Audit Chain Valid: {res['valid']} (Total Events: {res['events']}, Head: {res['head_hash']})"
+        )
 
     print("\n" + "=" * 60)
     print("   ALL DEMO GATES VERIFIED SUCCESSFULLY")

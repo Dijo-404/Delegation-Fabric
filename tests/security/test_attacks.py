@@ -72,7 +72,7 @@ async def test_attack_1_prompt_injection_denied(
             },
         )
 
-        assert attack_resp.status_code == 200
+        assert attack_resp.status_code == 403
         data = attack_resp.json()
         # MUST BE DENIED CLOSED
         assert data["decision"] == "deny"
@@ -120,7 +120,7 @@ async def test_attack_2_cross_agent_escalation_denied(
             },
         )
 
-        assert attack_resp.status_code == 200
+        assert attack_resp.status_code == 403
         data = attack_resp.json()
         assert data["decision"] == "deny"
         assert data["reason_code"] == "CAPABILITY_NOT_DECLARED"
