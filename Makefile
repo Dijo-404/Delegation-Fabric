@@ -24,24 +24,25 @@ format-check:
 	$(UV) run ruff format --check packages/ apps/ tests/
 
 typecheck:
-	$(UV) run mypy packages/delegation_fabric_core packages/delegation_fabric_adapters
+	$(UV) run mypy packages/delegation_fabric_core packages/delegation_fabric_adapters apps
 
 ## ─── Tests ────────────────────────────────────────────────────────────────────
 
+COV := --cov=packages/delegation_fabric_core --cov-report=term-missing --cov-fail-under=85
+
 test-core:
-	$(UV) run pytest tests/unit/core/ -v --cov=packages/delegation_fabric_core \
-	    --cov-report=term-missing --cov-fail-under=85
+	$(UV) run pytest tests/unit/core/ -v $(COV)
 
 test-integration:
-	$(UV) run pytest tests/integration/ -v
+	$(UV) run pytest tests/integration/ -v --no-cov
 
 test-security:
-	$(UV) run pytest tests/security/ -v
+	$(UV) run pytest tests/security/ -v --no-cov
 
 test-e2e:
-	$(UV) run pytest tests/e2e/ -v
+	$(UV) run pytest tests/e2e/ -v --no-cov
 
-check: lint format-check typecheck test-core test-security
+check: lint format-check typecheck test-core test-integration test-security test-e2e
 	@echo "All checks passed."
 
 ## ─── Infrastructure ───────────────────────────────────────────────────────────
@@ -86,10 +87,10 @@ demo-preflight:
 	$(UV) run python seed/timeline/preflight.py
 
 attack-injection:
-	$(UV) run pytest tests/security/test_injection_attack.py -v -s
+	$(UV) run pytest tests/security/test_attacks.py::test_attack_1_prompt_injection_denied -v --no-cov
 
 attack-escalation:
-	$(UV) run pytest tests/security/test_escalation_attack.py -v -s
+	$(UV) run pytest tests/security/test_attacks.py::test_attack_2_cross_agent_escalation_denied -v --no-cov
 
 demo:
 	$(UV) run python seed/timeline/demo.py

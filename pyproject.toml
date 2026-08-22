@@ -61,11 +61,18 @@ explicit_package_bases = true
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["packages", "."]
-addopts = "--cov=packages/delegation_fabric_core --cov-report=term-missing --cov-fail-under=85"
+
+# Coverage floor is enforced only on the core unit suite (make test-core / CI).
+# Other suites run with --no-cov to avoid failing the floor on partial scope.
+addopts = "--strict-markers -ra"
 
 [tool.coverage.run]
 source = ["packages/delegation_fabric_core"]
 omit = ["*/tests/*", "*/__init__.py"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["packages/delegation_fabric_core", "packages/delegation_fabric_adapters"]

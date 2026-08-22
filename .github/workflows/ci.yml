@@ -22,7 +22,7 @@ jobs:
       - name: Format check
         run: uv run ruff format --check packages/ apps/ tests/
       - name: Typecheck
-        run: uv run mypy packages/delegation_fabric_core packages/delegation_fabric_adapters
+        run: uv run mypy packages/delegation_fabric_core packages/delegation_fabric_adapters apps
 
   python-tests:
     name: Python Tests
@@ -34,10 +34,14 @@ jobs:
           version: "latest"
       - name: Install dependencies
         run: uv sync --all-extras
-      - name: Core unit tests
+      - name: Core unit tests (coverage floor 85%)
         run: uv run pytest tests/unit/core/ -v --cov=packages/delegation_fabric_core --cov-report=xml --cov-fail-under=85
+      - name: Integration tests
+        run: uv run pytest tests/integration/ -v --no-cov
       - name: Security fixture tests
-        run: uv run pytest tests/security/ -v
+        run: uv run pytest tests/security/ -v --no-cov
+      - name: E2E lifecycle tests
+        run: uv run pytest tests/e2e/ -v --no-cov
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         if: always()
