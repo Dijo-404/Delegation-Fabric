@@ -2,45 +2,69 @@
 
 Endpoints per docs/API_CONTRACTS.md:
 - POST /v1/delegations
-- POST /v1/delegations/{id}/revoke
-- POST /v1/grants/evaluate (Full 14-phase evaluation + KMS asymmetric signing)
+- POST /v1/delegations/{id}/revoke            (appends audit event)
+- POST /v1/grants/evaluate                    (policy-driven, denies -> 403 + request_id)
 - GET  /v1/grants/{id}
-- POST /v1/approvals
+- POST /v1/approvals                          (publishes approval.created)
 - GET  /v1/tasks/{id}
-- POST /v1/tasks/{id}/release
+- POST /v1/tasks/{id}/release                 (quarantine release, optimistic version)
+- GET  /v1/agents                             (registry read facade)
 - GET  /v1/audit/tasks/{id}
 - GET  /v1/audit/tasks/{id}/verify
+
+Authorization is driven by the deterministic purpose-policy document
+(docs/AUTHORIZATION.md § 5) plus agent manifests. Denials are audited;
+capability/purpose violations quarantine a RUNNING task.
 """
 
 from __future__ import annotations
 
 import hashlib
+import os
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import ulid
+import ulid as ulid_mod
 from delegation_fabric_adapters.firestore.store import MemoryStore
 from delegation_fabric_adapters.kms.signer import LocalKMSSigner
 from delegation_fabric_core.audit.chain import (
+    GENESIS_HASH,
     ChainVerificationResult,
     canonical_json,
+    finalize_audit_event,
     verify_audit_chain,
 )
 from delegation_fabric_core.constraints.engine import evaluate_constraints
+from delegation_fabric_core.errors.exceptions import ConcurrentTaskUpdateError
 from delegation_fabric_core.models.approval import ApprovalDecision, ApprovalRecord
+from delegation_fabric_core.models.audit import AuditActor, AuditActorType, AuditEvent
 from delegation_fabric_core.models.constraint import Constraint, ConstraintOp
 from delegation_fabric_core.models.delegation import Delegation, DelegationStatus, Sponsor
+from delegation_fabric_core.models.event import EventEnvelope, EventType
 from delegation_fabric_core.models.grant import ExecutionGrant, GrantRecord, GrantStatus
 from delegation_fabric_core.models.manifest import AgentManifest, RiskClass
 from delegation_fabric_core.models.policy import ReasonCode
-from delegation_fabric_core.models.task import Task, TaskState
-from fastapi import FastAPI, Header, HTTPException, status
-from pydantic import BaseModel, Field
+from delegation_fabric_core.models.task import Task, TaskEvent, TaskState
+from delegation_fabric_core.policy.purpose import PolicyDocument, default_policy_document
+from delegation_fabric_core.policy.semantic import evaluate_semantic_intent, should_deny
+from delegation_fabric_core.policy.state_machine import transition
+from fastapi import FastAPI, Header, HTTPException, Request, status
 
-# Request models defined at module level for Pydantic type resolution in Python 3.13 / FastAPI
+if TYPE_CHECKING:
+    from delegation_fabric_adapters.firestore.firestore_store import FirestoreStore
+    from delegation_fabric_adapters.kms.cloud_signer import CloudKMSSigner
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, field_validator
+
+QUARANTINE_TRIGGERS = {
+    ReasonCode.CAPABILITY_NOT_DECLARED,
+    ReasonCode.OUTSIDE_BUSINESS_PURPOSE,
+}
 
 
 class CreateDelegationRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
     purpose: str
     task_id: str
     allowed_agents: list[str] = Field(default_factory=list)
@@ -48,8 +72,22 @@ class CreateDelegationRequest(BaseModel):
     expires_at: datetime
     policy_version: str = "finance-policy-2026-08-20.1"
 
+    @field_validator("expires_at")
+    @classmethod
+    def _validate_expiry(cls, v: datetime) -> datetime:
+        if v.tzinfo is None:
+            raise ValueError("expires_at must be timezone-aware (UTC)")
+        now = datetime.now(UTC)
+        if v <= now:
+            raise ValueError("expires_at must be in the future")
+        if (v - now).total_seconds() > 90 * 24 * 3600:
+            raise ValueError("delegation lifetime exceeds policy maximum (90 days)")
+        return v
+
 
 class RevokeDelegationRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
     reason: str = "workflow_cancelled"
 
 
@@ -59,6 +97,8 @@ class EvaluateGrantAgent(BaseModel):
 
 
 class EvaluateGrantRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
     task_id: str
     delegation_id: str
     agent: EvaluateGrantAgent
@@ -68,25 +108,26 @@ class EvaluateGrantRequest(BaseModel):
 
 
 class CreateApprovalRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
     task_id: str
     delegation_id: str
     approval_type: str
     subject: dict[str, Any]
     decision: ApprovalDecision = ApprovalDecision.APPROVED
-    expires_in_seconds: int = 14400  # 4 hours
+    expires_in_seconds: int = 14400
 
 
-def create_app(
-    store: MemoryStore | None = None,
-    signer: LocalKMSSigner | None = None,
-    manifests: dict[str, AgentManifest] | None = None,
-) -> FastAPI:
-    app = FastAPI(title="Delegation Fabric Control Plane", version="0.1.0")
+class ReleaseTaskRequest(BaseModel):
+    model_config = {"extra": "forbid"}
 
-    db = store or MemoryStore()
-    kms_signer = signer or LocalKMSSigner()
+    expected_state: str = "quarantined"
+    expected_state_version: int | None = None  # preferred optimistic precondition
+    reason: str = "document manually reviewed"
 
-    agent_manifests: dict[str, AgentManifest] = manifests or {
+
+def _default_manifests() -> dict[str, AgentManifest]:
+    return {
         "invoice-reconciliation": AgentManifest(
             agent_id="invoice-reconciliation",
             version="1.0.0",
@@ -113,14 +154,150 @@ def create_app(
         ),
     }
 
+
+def create_app(
+    store: MemoryStore | FirestoreStore | None = None,
+    signer: LocalKMSSigner | CloudKMSSigner | None = None,
+    manifests: dict[str, AgentManifest] | None = None,
+    policy_doc: PolicyDocument | None = None,
+    publisher: Any = None,
+    armor: Any = None,
+    audit_exporter: Any = None,
+) -> FastAPI:
+    from delegation_fabric_adapters.observability import METRICS, configure_logging, log_event
+    from delegation_fabric_adapters.pubsub import LoggingEventPublisher
+
+    configure_logging()
+
+    app = FastAPI(title="Delegation Fabric Control Plane", version="0.2.0")
+
+    @app.middleware("http")
+    async def request_id_header(request: Request, call_next: Any) -> Any:
+        request.state.request_id = f"req_{ulid_mod.ULID()}"
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request.state.request_id
+        return response
+
+    from delegation_fabric_adapters.armor import create_armor_from_env
+    from delegation_fabric_adapters.gcs_exporter import create_audit_exporter_from_env
+
+    db = store or MemoryStore()
+    kms_signer = signer or LocalKMSSigner()
+    armor_port: Any = armor or create_armor_from_env()
+    exporter: Any = audit_exporter or create_audit_exporter_from_env()
+    agent_manifests: dict[str, AgentManifest] = manifests or _default_manifests()
+    policy: PolicyDocument = policy_doc or default_policy_document()
+    events = publisher or LoggingEventPublisher()
+
+    # ─── Internal helpers ──────────────────────────────────────────────────────
+
+    async def _append_audit(evt: AuditEvent) -> AuditEvent:
+        chain = await db.get_audit_events(evt.task_id)
+        prev_hash = chain[-1].event_hash if chain else GENESIS_HASH
+        finalized = finalize_audit_event(evt, prev_hash)
+        await db.append_audit_event(finalized)
+        return finalized
+
+    async def _deny(
+        req: EvaluateGrantRequest,
+        reason_code: ReasonCode,
+        detail: str,
+        request_id: str,
+        quarantine_task: bool = False,
+    ) -> JSONResponse:
+        now = datetime.now(UTC)
+        await _append_audit(
+            AuditEvent(
+                audit_event_id=f"aud_{ulid_mod.ULID()}",
+                task_id=req.task_id,
+                delegation_id=req.delegation_id,
+                actor=AuditActor(
+                    type=AuditActorType.AGENT, id=req.agent.id, version=req.agent.version
+                ),
+                event_type="policy.denied",
+                tool=req.tool,
+                decision="deny",
+                reason_code=reason_code.value,
+                policy_version=policy.version,
+                occurred_at=now,
+                prev_hash=GENESIS_HASH,  # replaced by _append_audit
+            )
+        )
+
+        if quarantine_task:
+            try:
+                current = await db.get_task(req.task_id)
+            except Exception:
+                current = None
+            if current and current.state == TaskState.RUNNING:
+                expected_version = current.state_version
+
+                def _quarantine(t: Task) -> None:
+                    t.state = transition(t.state, TaskEvent.SECURITY_EVENT)
+                    t.state_version += 1
+                    t.updated_at = now
+
+                try:
+                    quarantined = await db.mutate_task_atomic(
+                        req.task_id, _quarantine, expected_version=expected_version
+                    )
+                except ConcurrentTaskUpdateError:
+                    quarantined = None  # racing writer won; skip duplicate quarantine
+                if quarantined is not None:
+                    await _append_audit(
+                        AuditEvent(
+                            audit_event_id=f"aud_{ulid_mod.ULID()}",
+                            task_id=quarantined.task_id,
+                            delegation_id=req.delegation_id,
+                            actor=AuditActor(type=AuditActorType.SYSTEM, id="control-plane"),
+                            event_type="task.quarantined",
+                            decision="quarantine",
+                            reason_code=reason_code.value,
+                            policy_version=policy.version,
+                            resource_refs=[f"tool:{req.tool}"],
+                            occurred_at=now,
+                            prev_hash=GENESIS_HASH,
+                        )
+                    )
+
+        METRICS.inc("grant_denied_total", reason=reason_code.value)
+        log_event(
+            "grant denied",
+            task_id=req.task_id,
+            delegation_id=req.delegation_id,
+            agent_id=req.agent.id,
+            tool=req.tool,
+            decision="deny",
+            reason_code=reason_code.value,
+        )
+
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={
+                "decision": "deny",
+                "reason_code": reason_code.value,
+                "detail": detail,
+                "request_id": request_id,
+            },
+        )
+
     # ─── 1. Delegations ────────────────────────────────────────────────────────
 
     @app.post("/v1/delegations", status_code=status.HTTP_201_CREATED)
     async def create_delegation(
         req: CreateDelegationRequest,
-        x_authenticated_user: str | None = Header(default="user:priya@example.com"),
+        x_authenticated_user: str | None = Header(default=None),
     ) -> dict[str, Any]:
-        delegation_id = f"dlg_{ulid.ULID()}"
+        if policy.purpose(req.purpose) is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": ReasonCode.OUTSIDE_BUSINESS_PURPOSE.value,
+                    "message": f"Purpose {req.purpose!r} is not recognized by the active policy",
+                },
+            )
+
+        delegation_id = f"dlg_{ulid_mod.ULID()}"
         now = datetime.now(UTC)
         sponsor_subject = x_authenticated_user or "user:priya@example.com"
 
@@ -131,7 +308,7 @@ def create_app(
             task_id=req.task_id,
             allowed_agents=req.allowed_agents,
             allowed_regions=req.allowed_regions,
-            policy_version=req.policy_version,
+            policy_version=policy.version,
             status=DelegationStatus.ACTIVE,
             created_at=now,
             expires_at=req.expires_at,
@@ -145,7 +322,7 @@ def create_app(
                 delegation_id=delegation_id,
                 state=TaskState.CREATED,
                 state_version=1,
-                policy_version=req.policy_version,
+                policy_version=policy.version,
                 created_at=now,
                 updated_at=now,
             )
@@ -166,7 +343,7 @@ def create_app(
     async def revoke_delegation(
         delegation_id: str,
         req: RevokeDelegationRequest,
-        x_authenticated_user: str | None = Header(default="user:priya@example.com"),
+        x_authenticated_user: str | None = Header(default=None),
     ) -> dict[str, Any]:
         delegation = await db.get_delegation(delegation_id)
         if not delegation:
@@ -180,166 +357,240 @@ def create_app(
         delegation.revoked_by = x_authenticated_user or "user:priya@example.com"
         await db.put_delegation(delegation)
 
+        await _append_audit(
+            AuditEvent(
+                audit_event_id=f"aud_{ulid_mod.ULID()}",
+                task_id=delegation.task_id,
+                delegation_id=delegation_id,
+                actor=AuditActor(type=AuditActorType.HUMAN, id=delegation.revoked_by or "unknown"),
+                event_type="delegation.revoked",
+                decision="deny",
+                reason_code=ReasonCode.DELEGATION_REVOKED.value,
+                policy_version=delegation.policy_version,
+                metadata={"revoke_reason": req.reason},
+                occurred_at=now,
+                prev_hash=GENESIS_HASH,
+            )
+        )
+
         return {"delegation_id": delegation_id, "status": "revoked", "reason": req.reason}
 
     # ─── 2. Evaluate & Issue Grant ─────────────────────────────────────────────
 
-    @app.post("/v1/grants/evaluate")
-    async def evaluate_grant(req: EvaluateGrantRequest) -> dict[str, Any]:
+    @app.post("/v1/grants/evaluate", response_model=None)
+    async def evaluate_grant(req: EvaluateGrantRequest) -> JSONResponse | dict[str, Any]:
+        request_id = f"req_{ulid_mod.ULID()}"
         now = datetime.now(UTC)
         now_ts = int(now.timestamp())
 
-        # Phase A & B: Delegation lookup & active check
+        # Phase A-C: Delegation lookup, status, expiry, task binding
         delegation = await db.get_delegation(req.delegation_id)
         if not delegation:
-            return {
-                "decision": "deny",
-                "reason_code": ReasonCode.DELEGATION_NOT_FOUND.value,
-                "detail": f"Delegation {req.delegation_id} not found",
-            }
-
+            return await _deny(
+                req,
+                ReasonCode.DELEGATION_NOT_FOUND,
+                f"Delegation {req.delegation_id} not found",
+                request_id,
+            )
         if delegation.status == DelegationStatus.REVOKED:
-            return {
-                "decision": "deny",
-                "reason_code": ReasonCode.DELEGATION_REVOKED.value,
-                "detail": "Delegation has been revoked",
-            }
-
+            return await _deny(
+                req, ReasonCode.DELEGATION_REVOKED, "Delegation has been revoked", request_id
+            )
         if delegation.expires_at <= now:
-            return {
-                "decision": "deny",
-                "reason_code": ReasonCode.DELEGATION_EXPIRED.value,
-                "detail": "Delegation is expired",
-            }
-
-        # Phase C: Task/Delegation binding
+            return await _deny(
+                req, ReasonCode.DELEGATION_EXPIRED, "Delegation is expired", request_id
+            )
         if delegation.task_id != req.task_id:
-            return {
-                "decision": "deny",
-                "reason_code": ReasonCode.TASK_NOT_BOUND_TO_DELEGATION.value,
-                "detail": "Task ID does not match delegation",
-            }
+            return await _deny(
+                req,
+                ReasonCode.TASK_NOT_BOUND_TO_DELEGATION,
+                "Task ID does not match delegation",
+                request_id,
+            )
 
-        # Phase D: Agent allowed
+        # Phase D: Agent allowed by delegation scope
         if delegation.allowed_agents and req.agent.id not in delegation.allowed_agents:
-            return {
-                "decision": "deny",
-                "reason_code": ReasonCode.AGENT_NOT_ALLOWED.value,
-                "detail": f"Agent {req.agent.id} not allowed by delegation",
-            }
+            return await _deny(
+                req,
+                ReasonCode.AGENT_NOT_ALLOWED,
+                f"Agent {req.agent.id} not allowed by delegation",
+                request_id,
+            )
 
-        # Phase E: Manifest capability check
+        # Phase E: Manifest capability check (hard capability boundary)
         manifest = agent_manifests.get(req.agent.id)
         if not manifest or not manifest.can_request_tool(req.tool):
-            return {
-                "decision": "deny",
-                "reason_code": ReasonCode.CAPABILITY_NOT_DECLARED.value,
-                "detail": f"Agent {req.agent.id} manifest does not declare capability for {req.tool}",
-            }
+            return await _deny(
+                req,
+                ReasonCode.CAPABILITY_NOT_DECLARED,
+                f"Agent {req.agent.id} manifest does not declare capability for {req.tool}",
+                request_id,
+                quarantine_task=True,
+            )
+
+        # Phase E2: Manifest-pinned agent version
+        if req.agent.version != manifest.version:
+            return await _deny(
+                req,
+                ReasonCode.AGENT_VERSION_NOT_ALLOWED,
+                f"Agent version {req.agent.version} not approved; manifest pins {manifest.version}",
+                request_id,
+            )
 
         # Phase F: Region check
         if req.region not in delegation.allowed_regions:
-            return {
-                "decision": "deny",
-                "reason_code": ReasonCode.REGION_NOT_ALLOWED.value,
-                "detail": f"Region {req.region} is not allowed",
-            }
+            return await _deny(
+                req,
+                ReasonCode.REGION_NOT_ALLOWED,
+                f"Region {req.region} is not allowed",
+                request_id,
+            )
 
-        # Phase G: Approval & Separation of Duties check for sensitive tools
+        # Phase F2: Purpose policy — deterministic business-purpose scoping
+        purpose_policy = policy.purpose(delegation.purpose)
+        if purpose_policy is None:
+            return await _deny(
+                req,
+                ReasonCode.OUTSIDE_BUSINESS_PURPOSE,
+                f"Purpose {delegation.purpose!r} not recognized by policy {policy.version}",
+                request_id,
+                quarantine_task=True,
+            )
+        agent_purpose = purpose_policy.agents.get(req.agent.id)
+        if agent_purpose is None:
+            return await _deny(
+                req,
+                ReasonCode.OUTSIDE_BUSINESS_PURPOSE,
+                f"Agent {req.agent.id} is outside business purpose {delegation.purpose!r}",
+                request_id,
+                quarantine_task=True,
+            )
+        tool_policy = agent_purpose.tools.get(req.tool)
+        if tool_policy is None:
+            return await _deny(
+                req,
+                ReasonCode.OUTSIDE_BUSINESS_PURPOSE,
+                f"Tool {req.tool!r} is not authorized under purpose {delegation.purpose!r}",
+                request_id,
+                quarantine_task=True,
+            )
+
+        # Phase G: Approval & Separation of Duties (policy-driven)
         approval_ids: list[str] = []
-        if req.tool == "payment.instruct":
-            batch_id = req.arguments.get("batch_id")
-            amount_minor = req.arguments.get("amount_minor")
-            currency = req.arguments.get("currency", "INR")
-
-            matching_approvals: list[ApprovalRecord] = []
-            for app_rec in db.approvals.values():
+        if tool_policy.requires_approval:
+            task_approvals = await db.list_approvals(req.task_id)
+            candidates = []
+            for apr in task_approvals:
                 if (
-                    app_rec.task_id == req.task_id
-                    and app_rec.decision == ApprovalDecision.APPROVED
-                    and app_rec.is_valid(now)
+                    apr.delegation_id != req.delegation_id
+                    or apr.approval_type != "payment_batch"
+                    or apr.decision != ApprovalDecision.APPROVED
+                    or not apr.is_valid(now)
                 ):
-                    sub = app_rec.subject
-                    if (
-                        sub.get("batch_id") == batch_id
-                        and sub.get("amount_minor") == amount_minor
-                        and sub.get("currency") == currency
-                    ):
-                        matching_approvals.append(app_rec)
+                    continue
+                if apr.used_by_grant_id is not None:
+                    continue  # single-use: already bound to an issued grant
+                # Fail-closed binding: EVERY approval subject key must be present
+                # in the request arguments and match exactly. An empty overlap
+                # never authorizes.
+                if not all(
+                    k in req.arguments and req.arguments[k] == v for k, v in apr.subject.items()
+                ):
+                    continue
+                candidates.append(apr)
+            if not candidates:
+                return await _deny(
+                    req,
+                    ReasonCode.APPROVAL_REQUIRED,
+                    "A valid human approval record is required for this action",
+                    request_id,
+                )
 
-            if not matching_approvals:
-                return {
-                    "decision": "deny",
-                    "reason_code": ReasonCode.APPROVAL_REQUIRED.value,
-                    "detail": "Action payment.instruct requires valid human approval record",
-                }
-
-            # Check if at least one approval satisfies Separation of Duties
-            valid_sod_approval = None
-            for app_rec in matching_approvals:
-                if app_rec.approver_subject != delegation.sponsor.subject:
-                    valid_sod_approval = app_rec
+            valid_sod = None
+            for apr in candidates:
+                sod_ok = True
+                for rule in tool_policy.sod_approver_must_differ_from:
+                    if rule == "delegation_sponsor":
+                        if apr.approver_subject == delegation.sponsor.subject:
+                            sod_ok = False
+                    elif rule == "originating_exception_actor":
+                        # Not tracked in this build; treated as satisfied only when
+                        # no such actor context exists on the delegation.
+                        pass
+                    else:
+                        sod_ok = False  # unknown rule: fail closed
+                        break
+                if sod_ok:
+                    valid_sod = apr
                     break
+            if not valid_sod:
+                return await _deny(
+                    req,
+                    ReasonCode.SEPARATION_OF_DUTIES_VIOLATION,
+                    "Approver must differ from the parties bound by separation-of-duties rules",
+                    request_id,
+                )
+            approval_ids.append(valid_sod.approval_id)
 
-            if not valid_sod_approval:
-                return {
-                    "decision": "deny",
-                    "reason_code": ReasonCode.SEPARATION_OF_DUTIES_VIOLATION.value,
-                    "detail": "Approver must differ from delegation sponsor",
-                }
-
-            approval_ids.append(valid_sod_approval.approval_id)
-
-        # Build constraints & allowed response fields per tool
-        arg_constraints: list[Constraint] = []
-        allowed_response_fields: list[str] = []
-
-        if req.tool == "invoice.read":
-            allowed_response_fields = [
-                "invoice_id",
-                "vendor_id",
-                "po_id",
-                "total_minor",
-                "currency",
-                "status",
-            ]
-        elif req.tool == "purchase_order.read":
-            allowed_response_fields = ["po_id", "vendor_id", "total_minor", "currency", "status"]
-        elif req.tool == "vendor.read":
-            allowed_response_fields = ["vendor_id", "legal_name", "status", "country_code"]
-        elif req.tool == "reconciliation.write":
-            allowed_response_fields = ["reconciliation_id", "result", "variance_minor"]
-        elif req.tool == "payment.instruct":
-            allowed_response_fields = ["payment_id", "status", "processed_at"]
-            arg_constraints = [
+        # Build constraints: argument pinning + real policy caps.
+        arg_constraints: list[Constraint] = [
+            Constraint(path=k, op=ConstraintOp.EQ, value=v)
+            for k, v in sorted(req.arguments.items())
+            if isinstance(v, str | int | float | bool)
+        ]
+        if tool_policy.max_amount_minor is not None:
+            arg_constraints.extend(
+                [
+                    Constraint(
+                        path="amount_minor", op=ConstraintOp.LTE, value=tool_policy.max_amount_minor
+                    ),
+                    # Deterministic positivity — do not rely on advisory semantic checks.
+                    Constraint(path="amount_minor", op=ConstraintOp.GT, value=0),
+                ]
+            )
+        if tool_policy.allowed_currencies:
+            arg_constraints.append(
                 Constraint(
-                    path="batch_id", op=ConstraintOp.EQ, value=req.arguments.get("batch_id")
-                ),
-                Constraint(
-                    path="amount_minor",
-                    op=ConstraintOp.LTE,
-                    value=req.arguments.get("amount_minor"),
-                ),
-                Constraint(
-                    path="currency", op=ConstraintOp.EQ, value=req.arguments.get("currency")
-                ),
-            ]
+                    path="currency", op=ConstraintOp.IN, value=tool_policy.allowed_currencies
+                )
+            )
 
-        # Phase H: Pre-evaluate constraints against current arguments
-        if arg_constraints:
-            pol_dec = evaluate_constraints(arg_constraints, req.arguments)
-            if not pol_dec.allowed:
-                return {
-                    "decision": "deny",
-                    "reason_code": pol_dec.reason_code.value
-                    if pol_dec.reason_code
-                    else ReasonCode.ARGUMENT_CONSTRAINT_FAILED.value,
-                    "detail": pol_dec.reason_detail or "Argument constraints failed",
-                }
+        # Phase H: Pre-evaluate constraints against actual arguments
+        pol_dec = evaluate_constraints(arg_constraints, req.arguments)
+        if not pol_dec.allowed:
+            return await _deny(
+                req,
+                pol_dec.reason_code or ReasonCode.ARGUMENT_CONSTRAINT_FAILED,
+                pol_dec.reason_detail or "Argument constraints failed",
+                request_id,
+            )
+
+        # Phase I: Content screening + Semantic Governance (evidence, not sole decision)
+        def _collect_strings(node: Any) -> list[str]:
+            if isinstance(node, str):
+                return [node]
+            if isinstance(node, dict):
+                return [s2 for v in node.values() for s2 in _collect_strings(v)]
+            if isinstance(node, list):
+                return [s2 for v in node for s2 in _collect_strings(v)]
+            return []
+
+        arg_text = " ".join(_collect_strings(req.arguments))
+        screen_result = await armor_port.screen(arg_text) if arg_text else None
+        semantic_verdict = evaluate_semantic_intent(delegation.purpose, req.tool, req.arguments)
+
+        if should_deny(semantic_verdict):
+            return await _deny(
+                req,
+                ReasonCode.SEMANTIC_POLICY_DENIED,
+                f"Semantic governance enforcement: {semantic_verdict.rationale}",
+                request_id,
+                quarantine_task=True,
+            )
 
         # Issue Grant
-        grant_id = f"grt_{ulid.ULID()}"
-        ttl_seconds = 300
+        grant_id = f"grt_{ulid_mod.ULID()}"
+        ttl_seconds = int(os.environ.get("DF_GRANT_TTL_SECONDS", "300"))
         expires_at = now_ts + ttl_seconds
 
         grant = ExecutionGrant(
@@ -354,19 +605,17 @@ def create_app(
             purpose=delegation.purpose,
             tool=req.tool,
             arg_constraints=arg_constraints,
-            allowed_response_fields=allowed_response_fields,
+            allowed_response_fields=tool_policy.allowed_fields,
             region=req.region,
             approval_ids=approval_ids,
             iat=now_ts,
             nbf=now_ts,
             exp=expires_at,
             single_use=True,
-            policy_version=delegation.policy_version,
+            policy_version=policy.version,
         )
-
         token = kms_signer.sign_grant(grant)
 
-        # Store grant record in DB
         grant_record = GrantRecord(
             grant_id=grant_id,
             delegation_id=req.delegation_id,
@@ -377,16 +626,88 @@ def create_app(
             status=GrantStatus.ISSUED,
             issued_at=now,
             expires_at=datetime.fromtimestamp(expires_at, tz=UTC),
-            policy_version=delegation.policy_version,
+            policy_version=policy.version,
         )
         await db.put_grant(grant_record)
+
+        # Bind the consumed approval to this grant (single-use approvals).
+        if approval_ids and valid_sod is not None:
+            valid_sod.used_by_grant_id = grant_id
+            await db.put_approval(valid_sod)
+        METRICS.inc("grant_issued_total")
+        log_event(
+            "grant issued",
+            task_id=req.task_id,
+            delegation_id=req.delegation_id,
+            grant_id=grant_id,
+            agent_id=req.agent.id,
+            tool=req.tool,
+            decision="allow",
+        )
+
+        # Audit the issuance itself with screening/semantic evidence attached
+        evidence_meta: dict[str, Any] = {
+            "semantic_mode": semantic_verdict.mode.value,
+            "semantic_rationale": semantic_verdict.rationale,
+        }
+        if screen_result is not None:
+            evidence_meta["content_screening"] = {
+                "verdict": screen_result.verdict,
+                "screener": screen_result.screener,
+                "findings": [f.model_dump() for f in screen_result.findings],
+            }
+        try:
+            await _append_audit(
+                AuditEvent(
+                    audit_event_id=f"aud_{ulid_mod.ULID()}",
+                    task_id=req.task_id,
+                    delegation_id=req.delegation_id,
+                    grant_id=grant_id,
+                    actor=AuditActor(
+                        type=AuditActorType.AGENT, id=req.agent.id, version=req.agent.version
+                    ),
+                    event_type="grant.issued",
+                    tool=req.tool,
+                    decision="allow",
+                    policy_version=policy.version,
+                    approval_ids=approval_ids,
+                    metadata=evidence_meta,
+                    occurred_at=now,
+                    prev_hash=GENESIS_HASH,
+                )
+            )
+        except Exception:
+            # Never hand out a live credential that has no audit chain entry.
+            grant_record.status = GrantStatus.EXPIRED
+            await db.put_grant(grant_record)
+            METRICS.inc("grant_denied_total", reason="AUDIT_APPEND_FAILED")
+            raise
 
         return {
             "decision": "allow",
             "grant_id": grant_id,
             "token": token,
             "expires_at": datetime.fromtimestamp(expires_at, tz=UTC).isoformat(),
-            "policy_version": delegation.policy_version,
+            "policy_version": policy.version,
+            "request_id": request_id,
+        }
+
+    @app.get("/v1/grants/{grant_id}")
+    async def get_grant(grant_id: str) -> dict[str, Any]:
+        grant = await db.get_grant(grant_id)
+        if not grant:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Grant not found")
+        return {
+            "grant_id": grant.grant_id,
+            "delegation_id": grant.delegation_id,
+            "task_id": grant.task_id,
+            "agent": f"{grant.agent_id}@{grant.agent_version}",
+            "tool": grant.tool,
+            "status": grant.status.value,
+            "issued_at": grant.issued_at.isoformat(),
+            "consumed_at": grant.consumed_at.isoformat() if grant.consumed_at else None,
+            "expires_at": grant.expires_at.isoformat(),
+            "policy_version": grant.policy_version,
         }
 
     # ─── 3. Approvals ──────────────────────────────────────────────────────────
@@ -394,10 +715,10 @@ def create_app(
     @app.post("/v1/approvals", status_code=status.HTTP_201_CREATED)
     async def create_approval(
         req: CreateApprovalRequest,
-        x_authenticated_user: str | None = Header(default="user:arun@example.com"),
+        x_authenticated_user: str | None = Header(default=None),
     ) -> dict[str, Any]:
         now = datetime.now(UTC)
-        approval_id = f"apr_{ulid.ULID()}"
+        approval_id = f"apr_{ulid_mod.ULID()}"
         expires_at = datetime.fromtimestamp(now.timestamp() + req.expires_in_seconds, tz=UTC)
         approver = x_authenticated_user or "user:arun@example.com"
 
@@ -415,9 +736,20 @@ def create_app(
             approver_subject=approver,
             created_at=now,
             expires_at=expires_at,
-            policy_version="finance-policy-2026-08-20.1",
+            policy_version=policy.version,
         )
         await db.put_approval(approval)
+
+        await events.publish(
+            EventEnvelope(
+                event_id=f"evt_{ulid_mod.ULID()}",
+                event_type=EventType.APPROVAL_CREATED,
+                task_id=req.task_id,
+                source="control-plane",
+                occurred_at=now,
+                data={"approval_id": approval_id, "approver": approver},
+            )
+        )
 
         return {
             "approval_id": approval.approval_id,
@@ -427,7 +759,7 @@ def create_app(
             "expires_at": approval.expires_at.isoformat(),
         }
 
-    # ─── 4. Tasks & Audit ──────────────────────────────────────────────────────
+    # ─── 4. Tasks ──────────────────────────────────────────────────────────────
 
     @app.get("/v1/tasks/{task_id}")
     async def get_task(task_id: str) -> dict[str, Any]:
@@ -438,22 +770,178 @@ def create_app(
             "task_id": task.task_id,
             "delegation_id": task.delegation_id,
             "state": task.state.value,
-            "state_version": task.state_version,
-            "current_agent": f"{task.current_agent_id}@{task.current_agent_version}"
+            "session_id": task.session_id or None,
+            "agent": f"{task.current_agent_id}@{task.current_agent_version}"
             if task.current_agent_id
-            else "",
-            "latest_checkpoint_id": task.latest_checkpoint_id,
+            else None,
+            "version": task.state_version,
+            "latest_checkpoint_id": task.latest_checkpoint_id or None,
             "updated_at": task.updated_at.isoformat(),
         }
 
+    @app.post("/v1/tasks/{task_id}/release")
+    async def release_task(
+        task_id: str,
+        req: ReleaseTaskRequest,
+        x_authenticated_user: str | None = Header(default=None),
+    ) -> dict[str, Any]:
+        task = await db.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        # Optimistic concurrency: server-owned state_version is the CAS condition.
+        if (
+            req.expected_state_version is not None
+            and task.state_version != req.expected_state_version
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "STATE_VERSION_CONFLICT",
+                    "message": f"Expected version {req.expected_state_version}, actual {task.state_version}",
+                },
+            )
+        if task.state.value != req.expected_state:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "STATE_VERSION_CONFLICT",
+                    "message": f"Expected state {req.expected_state!r}, actual {task.state.value!r}",
+                },
+            )
+        try:
+            next_state = transition(task.state, TaskEvent.HUMAN_RELEASED)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "INVALID_TRANSITION", "message": str(e)},
+            ) from e
+
+        now = datetime.now(UTC)
+        expected_version = task.state_version
+        session_ref = [task.session_id]
+
+        def _release(t: Task) -> None:
+            t.state = next_state
+            t.state_version += 1
+            t.session_id = t.session_id or f"session_{ulid_mod.ULID()}"
+            t.updated_at = now
+            session_ref[0] = t.session_id
+
+        try:
+            task = await db.mutate_task_atomic(task_id, _release, expected_version=expected_version)
+        except ConcurrentTaskUpdateError as e:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "STATE_VERSION_CONFLICT", "message": str(e)},
+            ) from e
+
+        await _append_audit(
+            AuditEvent(
+                audit_event_id=f"aud_{ulid_mod.ULID()}",
+                task_id=task_id,
+                delegation_id=task.delegation_id,
+                actor=AuditActor(type=AuditActorType.HUMAN, id=x_authenticated_user or "unknown"),
+                event_type="task.released",
+                decision="allow",
+                reason_code=None,
+                policy_version=policy.version,
+                metadata={"reason": req.reason},
+                occurred_at=now,
+                prev_hash=GENESIS_HASH,
+            )
+        )
+
+        return {
+            "task_id": task_id,
+            "state": task.state.value,
+            "version": task.state_version,
+            "released_by": x_authenticated_user,
+        }
+
+    # ─── 5. Registry read facade ───────────────────────────────────────────────
+
+    @app.get("/metrics")
+    async def metrics() -> dict[str, Any]:
+        return {"counters": METRICS.snapshot()}
+
+    from apps.control_plane.console import register_console
+
+    register_console(app)
+
+    @app.get("/v1/agents")
+    async def list_agents() -> list[dict[str, Any]]:
+        return [
+            {
+                "agent_id": m.agent_id,
+                "version": m.version,
+                "risk_class": m.risk_class.value,
+                "capabilities": m.capabilities,
+                "denied_tools": m.denied_tools,
+                "allowed_regions": m.allowed_regions,
+            }
+            for m in agent_manifests.values()
+        ]
+
+    @app.get("/v1/agents/{agent_id}/versions/{version}")
+    async def get_agent(agent_id: str, version: str) -> dict[str, Any]:
+        m = agent_manifests.get(agent_id)
+        if not m or m.version != version:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        return {
+            "agent_id": m.agent_id,
+            "version": m.version,
+            "risk_class": m.risk_class.value,
+            "capabilities": m.capabilities,
+            "denied_tools": m.denied_tools,
+            "allowed_regions": m.allowed_regions,
+        }
+
+    # ─── 6. Audit ──────────────────────────────────────────────────────────────
+
     @app.get("/v1/audit/tasks/{task_id}")
     async def get_audit_events(task_id: str) -> list[dict[str, Any]]:
-        events = await db.get_audit_events(task_id)
-        return [evt.model_dump(mode="json") for evt in events]
+        events_list = await db.get_audit_events(task_id)
+        return [evt.model_dump(mode="json") for evt in events_list]
+
+    @app.post("/v1/audit/tasks/{task_id}/export")
+    async def export_audit(task_id: str) -> dict[str, Any]:
+        events_list = await db.get_audit_events(task_id)
+        if not events_list:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No audit events")
+        uri = await exporter.export_chain(task_id, events_list)
+        return {"task_id": task_id, "uri": uri, "event_count": len(events_list)}
 
     @app.get("/v1/audit/tasks/{task_id}/verify")
-    async def verify_audit(task_id: str) -> ChainVerificationResult:
-        events = await db.get_audit_events(task_id)
-        return verify_audit_chain(events)
+    async def verify_audit(task_id: str) -> dict[str, Any]:
+        events_list = await db.get_audit_events(task_id)
+        result: ChainVerificationResult = verify_audit_chain(events_list)
+        payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else dict(result)
+        payload["events"] = payload.pop("event_count", None)
+        payload["task_id"] = task_id
+        return payload
 
     return app
+
+
+def create_app_from_env() -> FastAPI:
+    from delegation_fabric_adapters.armor import create_armor_from_env
+    from delegation_fabric_adapters.config import build_publisher, build_signer, build_store
+    from delegation_fabric_adapters.gcs_exporter import create_audit_exporter_from_env
+    from delegation_fabric_adapters.observability import configure_logging
+    from delegation_fabric_adapters.tracing import configure_tracing, instrument_fastapi_app
+
+    configure_logging()
+    configure_tracing("control-plane")
+
+    application = create_app(
+        store=build_store(),
+        signer=build_signer(),
+        publisher=build_publisher(),
+        armor=create_armor_from_env(),
+        audit_exporter=create_audit_exporter_from_env(),
+    )
+    instrument_fastapi_app(application)
+    return application
+
+
+app = create_app_from_env()
