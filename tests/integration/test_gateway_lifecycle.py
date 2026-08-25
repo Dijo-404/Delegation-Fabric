@@ -103,16 +103,15 @@ async def test_gateway_requires_agent_identity_headers(
         assert resp.json()["detail"]["code"] == "MISSING_AGENT_ID"
 
         # Missing X-Agent-Version -> 400, grant must NOT be consumed
-        token_b = await _issue_invoice_grant(cp_client, "task_hdr_no_ver")
         resp = await gw_client.post(
             "/v1/execute",
             json=body,
-            headers={"Authorization": f"Bearer {token_b}", "X-Agent-Id": "invoice-reconciliation"},
+            headers={"Authorization": f"Bearer {token_a}", "X-Agent-Id": "invoice-reconciliation"},
         )
         assert resp.status_code == 400
         assert resp.json()["detail"]["code"] == "MISSING_AGENT_VERSION"
 
-        # Neither credential was burned by the malformed attempts
+        # The grant was not burned by either malformed attempt
         ok = await gw_client.post(
             "/v1/execute",
             json=body,
@@ -160,7 +159,9 @@ async def test_gateway_denies_agent_identity_mismatch_with_reason_and_log(
 
         from delegation_fabric_adapters.observability import METRICS
 
-        assert METRICS.snapshot()["grant_denied_total{reason=GRANT_AGENT_MISMATCH}"] == 2
+        snap = METRICS.snapshot()
+        assert snap["grant_denied_total{field=agent_id,reason=GRANT_AGENT_MISMATCH}"] == 1
+        assert snap["grant_denied_total{field=agent_version,reason=GRANT_AGENT_MISMATCH}"] == 1
         log_out = capsys.readouterr().out
         assert '"field": "agent_id"' in log_out or '"field":"agent_id"' in log_out
         assert '"field": "agent_version"' in log_out or '"field":"agent_version"' in log_out

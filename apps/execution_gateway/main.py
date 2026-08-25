@@ -292,9 +292,14 @@ def create_app(
             )
 
         # Step 9a: Agent ID binding — declared identity must match the grant subject.
-        # (X-Agent-Id is derived from authenticated service context on Cloud Run.)
+        # X-Agent-Id is client-declared, not platform-derived; it is trusted only
+        # because it must equal the signed grant claim, which IS platform-verified.
         if caller_agent != grant.agent_id:
-            METRICS.inc("grant_denied_total", reason=ReasonCode.GRANT_AGENT_MISMATCH.value)
+            METRICS.inc(
+                "grant_denied_total",
+                reason=ReasonCode.GRANT_AGENT_MISMATCH.value,
+                field="agent_id",
+            )
             log_event(
                 "grant denied",
                 reason=ReasonCode.GRANT_AGENT_MISMATCH.value,
@@ -317,7 +322,11 @@ def create_app(
         # Step 9b: Agent version binding — re-verified at execution time against
         # the version pinned into the grant at issuance (stale-build defense).
         if caller_version != grant.agent_version:
-            METRICS.inc("grant_denied_total", reason=ReasonCode.GRANT_AGENT_MISMATCH.value)
+            METRICS.inc(
+                "grant_denied_total",
+                reason=ReasonCode.GRANT_AGENT_MISMATCH.value,
+                field="agent_version",
+            )
             log_event(
                 "grant denied",
                 reason=ReasonCode.GRANT_AGENT_MISMATCH.value,

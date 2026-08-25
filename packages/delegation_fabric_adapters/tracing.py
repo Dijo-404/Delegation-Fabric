@@ -7,10 +7,13 @@ with no telemetry stack installed.
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from typing import Any
+
+_LOG = logging.getLogger("delegation_fabric")
 
 
 class _NoopTracer:
@@ -45,6 +48,12 @@ def configure_tracing(service_name: str) -> None:
     except ImportError:
         return
 
+    # Idempotent guard BEFORE constructing anything: a repeat call when a
+    # provider is already installed must not build a provider (and its
+    # BatchSpanProcessor thread) only to discard it, leaking orphaned threads.
+    if isinstance(trace.get_tracer_provider(), TracerProvider):
+        return
+
     resource = Resource.create(
         {
             "service.name": service_name,
@@ -64,8 +73,7 @@ def configure_tracing(service_name: str) -> None:
         except ImportError:
             pass
 
-    if not isinstance(trace.get_tracer_provider(), TracerProvider):
-        trace.set_tracer_provider(provider)
+    trace.set_tracer_provider(provider)
 
 
 def instrument_fastapi_app(app: Any) -> None:
@@ -77,8 +85,8 @@ def instrument_fastapi_app(app: Any) -> None:
 
     try:
         FastAPIInstrumentor.instrument_app(app)
-    except Exception:
-        return
+    except Exception as exc:  # instrumentation is best-effort; never fatal
+        _LOG.debug("FastAPI instrumentation skipped: %s", exc)
 
 
 def get_tracer(name: str) -> Any:
