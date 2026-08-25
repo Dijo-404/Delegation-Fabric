@@ -34,6 +34,9 @@ def load_manifest_data(module_name: str) -> dict[str, Any]:
     Every agent ships both ``manifest.py`` and ``manifest.yaml``. The Python
     module is the runtime source of truth; the YAML twin is what operators and
     tooling read. Deployment fails closed when the two drift apart.
+
+    List values are compared element-wise, so reordering a list counts as drift
+    by design: fail-closed noise is preferred over semantic-equivalence checks.
     """
     module = importlib.import_module(module_name)
     data = getattr(module, "manifest", None)
@@ -42,12 +45,16 @@ def load_manifest_data(module_name: str) -> dict[str, Any]:
 
     module_file = getattr(module, "__file__", None)
     if not module_file:
-        return data
+        raise RuntimeError(
+            f"{module_name} has no source file location; cannot locate its manifest.yaml twin"
+        )
     yaml_path = Path(module_file).with_name("manifest.yaml")
     if not yaml_path.exists():
         raise FileNotFoundError(f"missing {yaml_path.name} twin for {module_name}")
 
     yaml_data = yaml.safe_load(yaml_path.read_text())
+    if not isinstance(yaml_data, dict):
+        raise ValueError(f"manifest.yaml for {module_name} is not a mapping")
     if yaml_data != data:
         diff = sorted(k for k in set(data) | set(yaml_data) if data.get(k) != yaml_data.get(k))
         raise ValueError(
@@ -56,20 +63,16 @@ def load_manifest_data(module_name: str) -> dict[str, Any]:
     return data
 
 
+_KNOWN_MANIFEST_FIELDS = set(AgentManifest.model_fields)
+
+
 def validate_manifest(module_name: str) -> AgentManifest:
     """Load manifest dict from module and validate it against the core schema."""
     data = load_manifest_data(module_name)
-    return AgentManifest(
-        agent_id=data["agent_id"],
-        version=data["version"],
-        display_name=data.get("display_name", ""),
-        owner=data.get("owner", ""),
-        risk_class=data["risk_class"],
-        capabilities=data["capabilities"],
-        denied_tools=data["denied_tools"],
-        allowed_regions=data["allowed_regions"],
-        memory=data.get("memory", {}),
-    )
+    unknown = sorted(set(data) - _KNOWN_MANIFEST_FIELDS)
+    if unknown:
+        raise ValueError(f"unknown manifest keys in {module_name}: {unknown}")
+    return AgentManifest.model_validate(data)
 
 
 def main(agent_module: str, display_name: str) -> int:

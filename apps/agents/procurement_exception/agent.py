@@ -6,6 +6,9 @@ from typing import Any
 
 from apps.agents.procurement_exception.tools import ProcurementExceptionTools
 
+HIGH_SEVERITY_RISK_SCORE = 80
+MEDIUM_SEVERITY_RISK_SCORE = 50
+
 
 async def run_exception_workflow(
     tools: ProcurementExceptionTools,
@@ -21,9 +24,9 @@ async def run_exception_workflow(
 
     # 2. Derive severity from vendor risk signal
     risk_score = vendor_data.get("risk_score", 0)
-    if risk_score >= 80:
+    if risk_score >= HIGH_SEVERITY_RISK_SCORE:
         severity = "high"
-    elif risk_score >= 50:
+    elif risk_score >= MEDIUM_SEVERITY_RISK_SCORE:
         severity = "medium"
     else:
         severity = "low"

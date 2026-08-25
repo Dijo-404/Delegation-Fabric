@@ -1,68 +1,33 @@
 """Unit tests for the invoice-reconciliation agent.
 
-Covers: manifest schema validation, manifest.yaml/manifest.py agreement,
-control-plane-before-gateway authorization ordering, and absence of direct
-database imports in tools.
+Covers: manifest schema validation, control-plane-before-gateway authorization
+ordering, variance computation, and absence of direct database imports in
+tools. Manifest YAML/Python parity lives in test_manifest_parity.py.
 """
 
 from __future__ import annotations
 
-import ast
 import importlib
-from pathlib import Path
 
 import httpx
 import respx
-import yaml
 from delegation_fabric_core.models.manifest import AgentManifest, RiskClass
 
-AGENT_DIR = Path(__file__).resolve().parents[3] / "apps" / "agents" / "invoice_reconciliation"
-MANIFEST_MODULE = "apps.agents.invoice_reconciliation.manifest"
-TOOLS_MODULE = "apps.agents.invoice_reconciliation.tools"
+from tests.unit.agents.conftest import agent_paths, forbidden_db_imports, load_manifest_dict
+
+AGENT_DIR, MANIFEST_MODULE, TOOLS_MODULE = agent_paths("invoice_reconciliation")
 
 CP_BASE = "https://cp.test"
 GW_BASE = "https://gw.test"
 
 
-def _load_manifest_dict() -> dict[str, object]:
-    module = importlib.import_module(MANIFEST_MODULE)
-    data: dict[str, object] = module.manifest
-    return data
-
-
-def _forbidden_db_imports(agent_dir: Path) -> set[str]:
-    """Collect DB driver imports via AST so sys.modules pollution cannot false-positive."""
-    forbidden_roots = {"sqlalchemy", "asyncpg", "psycopg", "psycopg2"}
-    found: set[str] = set()
-    for py_file in agent_dir.glob("*.py"):
-        tree = ast.parse(py_file.read_text())
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name.split(".")[0] in forbidden_roots:
-                        found.add(alias.name)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                root = node.module.split(".")[0]
-                if root in forbidden_roots:
-                    found.add(node.module)
-    return found
-
-
 def test_manifest_validates_against_core_schema() -> None:
-    manifest = AgentManifest(
-        **_load_manifest_dict(),  # type: ignore[arg-type]
-    )
+    manifest = AgentManifest.model_validate(load_manifest_dict(MANIFEST_MODULE))
     assert manifest.agent_id == "invoice-reconciliation"
     assert manifest.risk_class is RiskClass.MEDIUM
     assert manifest.can_request_tool("invoice.read")
     assert not manifest.can_request_tool("payment.instruct")
     assert not manifest.can_request_tool("vendor_bank_account.read")
-
-
-def test_manifest_yaml_matches_manifest_py() -> None:
-    py_data = _load_manifest_dict()
-    yaml_data = yaml.safe_load((AGENT_DIR / "manifest.yaml").read_text())
-    assert yaml_data == py_data
 
 
 @respx.mock
@@ -157,4 +122,4 @@ async def test_workflow_completes_via_protected_tools() -> None:
 
 
 def test_tools_have_no_direct_database_imports() -> None:
-    assert _forbidden_db_imports(AGENT_DIR) == set()
+    assert forbidden_db_imports(AGENT_DIR) == set()

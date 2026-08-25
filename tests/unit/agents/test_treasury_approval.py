@@ -1,67 +1,32 @@
 """Unit tests for the treasury-approval agent (approval-gated payment flow).
 
-Covers: manifest schema validation, manifest.yaml/manifest.py agreement,
-control-plane-before-gateway authorization ordering, and absence of direct
-database imports in tools.
+Covers: manifest schema validation, control-plane-before-gateway authorization
+ordering, amount binding to the approved batch, and absence of direct database
+imports in tools. Manifest YAML/Python parity lives in test_manifest_parity.py.
 """
 
 from __future__ import annotations
 
-import ast
 import importlib
-from pathlib import Path
 
 import httpx
 import respx
-import yaml
 from delegation_fabric_core.models.manifest import AgentManifest, RiskClass
 
-AGENT_DIR = Path(__file__).resolve().parents[3] / "apps" / "agents" / "treasury_approval"
-MANIFEST_MODULE = "apps.agents.treasury_approval.manifest"
-TOOLS_MODULE = "apps.agents.treasury_approval.tools"
+from tests.unit.agents.conftest import agent_paths, forbidden_db_imports, load_manifest_dict
+
+AGENT_DIR, MANIFEST_MODULE, TOOLS_MODULE = agent_paths("treasury_approval")
 
 CP_BASE = "https://cp.test"
 GW_BASE = "https://gw.test"
 
 
-def _load_manifest_dict() -> dict[str, object]:
-    module = importlib.import_module(MANIFEST_MODULE)
-    data: dict[str, object] = module.manifest
-    return data
-
-
-def _forbidden_db_imports(agent_dir: Path) -> set[str]:
-    """Collect DB driver imports via AST so sys.modules pollution cannot false-positive."""
-    forbidden_roots = {"sqlalchemy", "asyncpg", "psycopg", "psycopg2"}
-    found: set[str] = set()
-    for py_file in agent_dir.glob("*.py"):
-        tree = ast.parse(py_file.read_text())
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name.split(".")[0] in forbidden_roots:
-                        found.add(alias.name)
-            elif isinstance(node, ast.ImportFrom) and node.module:
-                root = node.module.split(".")[0]
-                if root in forbidden_roots:
-                    found.add(node.module)
-    return found
-
-
 def test_manifest_validates_against_core_schema() -> None:
-    manifest = AgentManifest(
-        **_load_manifest_dict(),  # type: ignore[arg-type]
-    )
+    manifest = AgentManifest.model_validate(load_manifest_dict(MANIFEST_MODULE))
     assert manifest.agent_id == "treasury-approval"
     assert manifest.risk_class is RiskClass.CRITICAL
     assert manifest.can_request_tool("payment_batch.read")
     assert manifest.can_request_tool("payment.instruct")
-
-
-def test_manifest_yaml_matches_manifest_py() -> None:
-    py_data = _load_manifest_dict()
-    yaml_data = yaml.safe_load((AGENT_DIR / "manifest.yaml").read_text())
-    assert yaml_data == py_data
 
 
 @respx.mock
@@ -128,22 +93,35 @@ async def test_tools_denied_by_control_plane_never_reach_gateway() -> None:
     assert gw_route.call_count == 0
 
 
-async def test_workflow_blocks_unapproved_batch() -> None:
-    instructed_batches: list[str] = []
-
+def _make_stub_tools(batch_data: dict[str, object], instructed: list[str]) -> object:
     class StubTools:
         async def read_payment_batch(self, batch_id: str) -> dict[str, object]:
-            return {"batch_id": batch_id, "approval_status": "pending_approval"}
+            return batch_data
 
         async def instruct_payment(
             self, batch_id: str, amount_minor: int, currency: str = "INR"
         ) -> dict[str, object]:
-            instructed_batches.append(batch_id)
-            return {}
+            instructed.append(batch_id)
+            return {"instruction_id": f"PI-{batch_id}"}
+
+    return StubTools()
+
+
+async def test_workflow_blocks_unapproved_batch() -> None:
+    instructed: list[str] = []
+    stub_tools = _make_stub_tools(
+        {
+            "batch_id": "PB-99",
+            "approval_status": "pending_approval",
+            "amount_minor": 100,
+            "currency": "INR",
+        },
+        instructed,
+    )
 
     agent_module = importlib.import_module("apps.agents.treasury_approval.agent")
     outcome = await agent_module.run_payment_approval_workflow(
-        tools=StubTools(),  # type: ignore[arg-type]
+        tools=stub_tools,  # type: ignore[arg-type]
         batch_id="PB-99",
         amount_minor=100,
     )
@@ -153,29 +131,97 @@ async def test_workflow_blocks_unapproved_batch() -> None:
         "batch_id": "PB-99",
         "approval_status": "pending_approval",
     }
-    assert instructed_batches == []
+    assert instructed == []
 
 
-async def test_workflow_instructs_approved_batch() -> None:
-    class StubTools:
-        async def read_payment_batch(self, batch_id: str) -> dict[str, object]:
-            return {"batch_id": batch_id, "approval_status": "approved"}
-
-        async def instruct_payment(
-            self, batch_id: str, amount_minor: int, currency: str = "INR"
-        ) -> dict[str, object]:
-            return {"instruction_id": f"PI-{batch_id}"}
+async def test_workflow_instructs_approved_batch_with_matching_terms() -> None:
+    instructed: list[str] = []
+    stub_tools = _make_stub_tools(
+        {
+            "batch_id": "PB-88",
+            "approval_status": "approved",
+            "amount_minor": 74200000,
+            "currency": "INR",
+        },
+        instructed,
+    )
 
     agent_module = importlib.import_module("apps.agents.treasury_approval.agent")
     outcome = await agent_module.run_payment_approval_workflow(
-        tools=StubTools(),  # type: ignore[arg-type]
+        tools=stub_tools,  # type: ignore[arg-type]
         batch_id="PB-88",
         amount_minor=74200000,
         currency="INR",
     )
     assert outcome["status"] == "completed"
     assert outcome["payment_instructed"] == {"instruction_id": "PI-PB-88"}
+    assert instructed == ["PB-88"]
+
+
+async def test_workflow_blocks_when_batch_lacks_approved_terms() -> None:
+    instructed: list[str] = []
+    stub_tools = _make_stub_tools({"batch_id": "PB-77", "approval_status": "approved"}, instructed)
+
+    agent_module = importlib.import_module("apps.agents.treasury_approval.agent")
+    outcome = await agent_module.run_payment_approval_workflow(
+        tools=stub_tools,  # type: ignore[arg-type]
+        batch_id="PB-77",
+        amount_minor=500,
+    )
+    assert outcome["status"] == "blocked"
+    assert outcome["reason"] == "batch_missing_approved_terms"
+    assert instructed == []
+
+
+async def test_workflow_blocks_amount_mismatch_against_approved_batch() -> None:
+    """Caller-supplied amounts that disagree with the approved batch never reach the gateway."""
+    instructed: list[str] = []
+    stub_tools = _make_stub_tools(
+        {
+            "batch_id": "PB-88",
+            "approval_status": "approved",
+            "amount_minor": 74200000,
+            "currency": "INR",
+        },
+        instructed,
+    )
+
+    agent_module = importlib.import_module("apps.agents.treasury_approval.agent")
+    outcome = await agent_module.run_payment_approval_workflow(
+        tools=stub_tools,  # type: ignore[arg-type]
+        batch_id="PB-88",
+        amount_minor=999999999,
+    )
+    assert outcome["status"] == "blocked"
+    assert outcome["reason"] == "payment_terms_mismatch"
+    assert outcome["approved_amount_minor"] == 74200000
+    assert outcome["requested_amount_minor"] == 999999999
+    assert instructed == []
+
+
+async def test_workflow_blocks_currency_mismatch_against_approved_batch() -> None:
+    instructed: list[str] = []
+    stub_tools = _make_stub_tools(
+        {
+            "batch_id": "PB-88",
+            "approval_status": "approved",
+            "amount_minor": 74200000,
+            "currency": "INR",
+        },
+        instructed,
+    )
+
+    agent_module = importlib.import_module("apps.agents.treasury_approval.agent")
+    outcome = await agent_module.run_payment_approval_workflow(
+        tools=stub_tools,  # type: ignore[arg-type]
+        batch_id="PB-88",
+        amount_minor=74200000,
+        currency="USD",
+    )
+    assert outcome["status"] == "blocked"
+    assert outcome["reason"] == "payment_terms_mismatch"
+    assert instructed == []
 
 
 def test_tools_have_no_direct_database_imports() -> None:
-    assert _forbidden_db_imports(AGENT_DIR) == set()
+    assert forbidden_db_imports(AGENT_DIR) == set()

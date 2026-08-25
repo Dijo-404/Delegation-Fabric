@@ -1,9 +1,8 @@
 """Invoice Reconciliation Agent tools.
 
 CRITICAL RULE: Tools never connect directly to Cloud SQL or production DB.
-Every tool:
-1. Calls Control Plane: POST /v1/grants/evaluate
-2. Calls Execution Gateway: POST /v1/execute with Bearer <ExecutionGrant>
+Every tool goes through the shared protected-call pattern in
+apps.agents._protected_tools.
 """
 
 from __future__ import annotations
@@ -12,8 +11,10 @@ from typing import Any
 
 from httpx import AsyncClient
 
+from apps.agents._protected_tools import ProtectedTools
 
-class InvoiceReconciliationTools:
+
+class InvoiceReconciliationTools(ProtectedTools):
     def __init__(
         self,
         control_plane_client: AsyncClient,
@@ -21,40 +22,14 @@ class InvoiceReconciliationTools:
         task_id: str,
         delegation_id: str,
     ) -> None:
-        self.cp = control_plane_client
-        self.gw = execution_gateway_client
-        self.task_id = task_id
-        self.delegation_id = delegation_id
-        self.agent_id = "invoice-reconciliation"
-        self.agent_version = "1.0.0"
-
-    async def _evaluate_and_execute(self, tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Core protected-call pattern."""
-        grant_resp = await self.cp.post(
-            "/v1/grants/evaluate",
-            json={
-                "task_id": self.task_id,
-                "delegation_id": self.delegation_id,
-                "agent": {"id": self.agent_id, "version": self.agent_version},
-                "tool": tool,
-                "arguments": arguments,
-            },
+        super().__init__(
+            control_plane_client,
+            execution_gateway_client,
+            task_id,
+            delegation_id,
+            agent_id="invoice-reconciliation",
+            agent_version="1.0.0",
         )
-        data = grant_resp.json()
-        if data.get("decision") != "allow":
-            return {"error": data.get("reason_code", "DENIED"), "detail": data.get("detail")}
-
-        token = data["token"]
-        exec_resp = await self.gw.post(
-            "/v1/execute",
-            json={"tool": tool, "arguments": arguments},
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        if exec_resp.status_code != 200:
-            return {"error": "EXECUTION_FAILED", "detail": exec_resp.json()}
-
-        res = exec_resp.json().get("result", {})
-        return dict(res) if isinstance(res, dict) else {}
 
     async def read_invoice(self, invoice_id: str) -> dict[str, Any]:
         return await self._evaluate_and_execute("invoice.read", {"invoice_id": invoice_id})

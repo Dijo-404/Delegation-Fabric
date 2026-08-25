@@ -29,7 +29,35 @@ async def run_payment_approval_workflow(
             "approval_status": approval_status,
         }
 
-    # 3. Instruct payment
+    # 3. Amount/currency gate: bind the instructed payment to the approved
+    # batch record instead of trusting caller-supplied figures. Defense in
+    # depth: the Control Plane re-evaluates constraints server-side at
+    # /v1/execute, but the agent must never submit amounts that disagree with
+    # the approved batch data returned by payment_batch.read.
+    batch_amount = batch_data.get("amount_minor")
+    batch_currency = batch_data.get("currency")
+    amount_ok = isinstance(batch_amount, int) and not isinstance(batch_amount, bool)
+    currency_ok = isinstance(batch_currency, str)
+    if not amount_ok or not currency_ok:
+        return {
+            "status": "blocked",
+            "reason": "batch_missing_approved_terms",
+            "batch_id": batch_id,
+            "approval_status": approval_status,
+        }
+    if batch_amount != amount_minor or batch_currency != currency:
+        return {
+            "status": "blocked",
+            "reason": "payment_terms_mismatch",
+            "batch_id": batch_id,
+            "approval_status": approval_status,
+            "approved_amount_minor": batch_amount,
+            "requested_amount_minor": amount_minor,
+            "approved_currency": batch_currency,
+            "requested_currency": currency,
+        }
+
+    # 4. Instruct payment
     instruct_result = await tools.instruct_payment(batch_id, amount_minor, currency)
     if "error" in instruct_result:
         return {"status": "failed", "error": instruct_result}
