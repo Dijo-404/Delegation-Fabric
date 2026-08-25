@@ -162,6 +162,38 @@ Push subscriptions:
 
 Do not enable/document exactly-once for push.
 
+### Topic rename migration (2026-08-26)
+
+Commit `08c3dc5` ("align pubsub topic naming across terraform publisher and
+docs") renamed the Pub/Sub topology from underscore style to the canonical
+dotted style:
+
+```text
+delegation_fabric_tasks   → delegation_fabric.tasks
+delegation_fabric_approvals → delegation_fabric.approvals
+delegation_fabric_webhooks  → delegation_fabric.webhooks
+<topic>_dlq               → <topic>.dlq
+<topic>-push              → <topic>.push
+```
+
+Pub/Sub resource names are immutable: Terraform treats these renames as
+destroy + recreate. Consequences:
+
+- undelivered messages on old topics/subscriptions are lost;
+- push subscriptions are recreated, so delivery pauses until re-applied;
+- publishers using old names fail until redeployed against new names.
+
+Migration path (applied for this environment):
+
+1. Confirm no in-flight traffic: hackathon/demo only, no production queues.
+2. Redeploy publishers/services so code builds dotted topic ids (already the
+   case in `packages/delegation_fabric_adapters`).
+3. `make infra` (`terraform apply`) destroys old topics/DLQs/push subs and
+   creates the dotted equivalents; DLQ service-agent IAM is unaffected.
+4. Smoke test one task end-to-end before demo use.
+
+Assumption of record: no in-flight traffic existed at migration time.
+
 ---
 
 ## 9. Configuration
@@ -323,7 +355,7 @@ Delegation Fabric deterministic authorization still runs.
 
 ### Semantic Governance unavailable
 
-If configured as required enforcement, deny.  
+If configured as required enforcement, deny.
 If configured as dry-run companion, continue deterministic authorization and record unavailable status.
 
 ---

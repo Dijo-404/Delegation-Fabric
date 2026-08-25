@@ -28,7 +28,8 @@ typecheck:
 
 ## ─── Tests ────────────────────────────────────────────────────────────────────
 
-COV := --cov=packages/delegation_fabric_core --cov-report=term-missing --cov-fail-under=85
+# term for humans, xml for codecov upload in CI.
+COV := --cov=packages/delegation_fabric_core --cov-report=term-missing --cov-report=xml --cov-fail-under=85
 
 test-core:
 	$(UV) run pytest tests/unit/core/ -v $(COV)
