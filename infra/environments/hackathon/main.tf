@@ -29,10 +29,12 @@ variable "region" {
 
 locals {
   services = ["control-plane", "execution-gateway", "worker"]
+  # Canonical dotted topic names mandated by PLAN.md (§ Topics); the publisher
+  # in delegation_fabric_adapters.pubsub builds the same f"{prefix}.{suffix}" ids.
   topics = [
-    "delegation_fabric_tasks",
-    "delegation_fabric_approvals",
-    "delegation_fabric_webhooks",
+    "delegation_fabric.tasks",
+    "delegation_fabric.approvals",
+    "delegation_fabric.webhooks",
   ]
 }
 
@@ -91,12 +93,12 @@ resource "google_pubsub_topic" "main" {
 
 resource "google_pubsub_topic" "dlq" {
   for_each = toset(local.topics)
-  name     = "${each.key}_dlq"
+  name     = "${each.key}.dlq"
 }
 
 resource "google_pubsub_subscription" "push" {
   for_each             = toset(local.topics)
-  name                 = "${each.key}-push"
+  name                 = "${each.key}.push"
   topic                = google_pubsub_topic.main[each.key].id
   ack_deadline_seconds = 30
 
