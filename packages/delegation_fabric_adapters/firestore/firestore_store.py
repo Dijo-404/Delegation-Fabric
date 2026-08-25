@@ -29,12 +29,11 @@ from delegation_fabric_core.models.grant import GrantRecord, GrantStatus
 from delegation_fabric_core.models.task import Task
 from google.cloud.firestore import FieldFilter
 
+from delegation_fabric_adapters.firestore.store import DEFAULT_LIST_LIMIT
+
 if TYPE_CHECKING:
     from google.cloud.firestore_v1.base_document import DocumentSnapshot
     from google.cloud.firestore_v1.transaction import Transaction
-
-
-DEFAULT_LIST_LIMIT = 200
 
 
 def _snapshot(result: Any) -> DocumentSnapshot:
@@ -261,10 +260,19 @@ class FirestoreStore:
 
         await asyncio.to_thread(_put)
 
-    async def list_approvals(self, task_id: str) -> list[ApprovalRecord]:
+    async def list_approvals(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[ApprovalRecord]:
         def _list() -> list[ApprovalRecord]:
-            docs = self._db.collection("approvals").where("task_id", "==", task_id).stream()
-            return [ApprovalRecord.model_validate(d.to_dict()) for d in docs]
+            query = (
+                self._db.collection("approvals")
+                .where(filter=FieldFilter("task_id", "==", task_id))
+                .order_by("__name__")
+            )
+            if limit is not None:
+                query = query.limit(limit)
+            docs = query.stream()
+            return [ApprovalRecord.model_validate(d.to_dict() or {}) for d in docs]
 
         return await asyncio.to_thread(_list)
 
@@ -409,16 +417,17 @@ class FirestoreStore:
 
         await asyncio.to_thread(_run)
 
-    async def get_audit_events(self, task_id: str) -> list[AuditEvent]:
+    async def get_audit_events(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[AuditEvent]:
         def _query() -> list[AuditEvent]:
-            from google.cloud.firestore import FieldFilter
-
-            docs = (
+            query = (
                 self._db.collection("audit_events")
                 .where(filter=FieldFilter("task_id", "==", task_id))
                 .order_by("__name__")
-                .stream()
             )
-            return [AuditEvent.model_validate(doc.to_dict() or {}) for doc in docs]
+            if limit is not None:
+                query = query.limit(limit)
+            return [AuditEvent.model_validate(doc.to_dict() or {}) for doc in query.stream()]
 
         return await asyncio.to_thread(_query)

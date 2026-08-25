@@ -171,3 +171,54 @@ async def test_list_accessors_honor_default_and_explicit_limits() -> None:
     }
     assert len(await store.list_grants("task_2", limit=1)) == 1
     assert len(await store.list_checkpoints("task_2", limit=1)) == 1
+
+
+async def test_list_approvals_per_task_is_bounded() -> None:
+    store = MemoryStore()
+    for i in range(4):
+        await store.put_approval(_approval(f"apr_{i}", task_id="task_1"))
+
+    assert len(await store.list_approvals("task_1")) == 4
+    assert len(await store.list_approvals("task_1", limit=None)) == 4
+    assert len(await store.list_approvals("task_1", limit=2)) == 2
+    # Copy-on-read: mutating a returned approval must not affect the store.
+    listed = await store.list_approvals("task_1")
+    listed[0].decision = ApprovalDecision.REJECTED
+    fresh = await store.get_approval("apr_0")
+    assert fresh is not None
+    assert fresh.decision == ApprovalDecision.APPROVED
+
+
+async def test_get_audit_events_is_bounded_and_ordered_by_append() -> None:
+    from delegation_fabric_core.models.audit import AuditActor, AuditActorType, AuditEvent
+
+    def _event(event_id: str) -> AuditEvent:
+        return AuditEvent(
+            audit_event_id=event_id,
+            task_id="task_1",
+            delegation_id="dlg_1",
+            actor=AuditActor(type=AuditActorType.AGENT, id="invoice-reconciliation"),
+            event_type="tool.execution.completed",
+            decision="allow",
+            policy_version="finance-policy-2026-08-20.1",
+            occurred_at=datetime(2026, 1, 1, tzinfo=UTC),
+            prev_hash="genesis",
+        )
+
+    store = MemoryStore()
+    for i in range(4):
+        await store.append_audit_event(_event(f"evt_{i}"))
+
+    chain = await store.get_audit_events("task_1")
+    assert [e.audit_event_id for e in chain] == ["evt_0", "evt_1", "evt_2", "evt_3"]
+    assert [e.audit_event_id for e in await store.get_audit_events("task_1", limit=None)] == [
+        "evt_0",
+        "evt_1",
+        "evt_2",
+        "evt_3",
+    ]
+    assert [e.audit_event_id for e in await store.get_audit_events("task_1", limit=2)] == [
+        "evt_0",
+        "evt_1",
+    ]
+    assert await store.get_audit_events("missing") == []

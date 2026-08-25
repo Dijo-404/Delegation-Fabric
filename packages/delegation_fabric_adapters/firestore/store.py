@@ -154,9 +154,13 @@ class MemoryStore:
         async with self._lock:
             return self.approvals.get(approval_id)
 
-    async def list_approvals(self, task_id: str) -> list[ApprovalRecord]:
+    async def list_approvals(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[ApprovalRecord]:
+        """Read-only approval history for a task (insertion order)."""
         async with self._lock:
-            return [a for a in self.approvals.values() if a.task_id == task_id]
+            listed = [a.model_copy() for a in self.approvals.values() if a.task_id == task_id]
+            return listed if limit is None else listed[:limit]
 
     async def list_all_approvals(
         self, limit: int | None = DEFAULT_LIST_LIMIT
@@ -237,6 +241,10 @@ class MemoryStore:
                 self.audit_events_by_task[event.task_id] = []
             self.audit_events_by_task[event.task_id].append(event)
 
-    async def get_audit_events(self, task_id: str) -> list[AuditEvent]:
+    async def get_audit_events(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[AuditEvent]:
+        """Read-only audit chain for a task in append (sequence) order."""
         async with self._lock:
-            return list(self.audit_events_by_task.get(task_id, []))
+            listed = [e.model_copy() for e in self.audit_events_by_task.get(task_id, [])]
+            return listed if limit is None else listed[:limit]

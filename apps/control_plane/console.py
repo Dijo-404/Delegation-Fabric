@@ -114,8 +114,8 @@ _PAGE = """<!doctype html>
 </section>
 
 <section id="tab-approvals" class="hidden">
-  <table><thead><tr><th>Approval</th><th>Type</th><th>Approver</th><th>Decision</th><th>Queue state</th><th>Subject (masked)</th><th>Subject hash</th><th>Created</th><th>Expires</th><th>Bound grant</th></tr></thead>
-  <tbody id="approval-rows"><tr><td colspan="10" class="muted">Loading&hellip;</td></tr></tbody></table>
+  <table><thead><tr><th>Approval</th><th>Type</th><th>Approver</th><th>Decision</th><th>Queue state</th><th>Subject hash</th><th>Created</th><th>Expires</th><th>Bound grant</th></tr></thead>
+  <tbody id="approval-rows"><tr><td colspan="9" class="muted">Loading&hellip;</td></tr></tbody></table>
 </section>
 
 <section id="tab-task" class="hidden">
@@ -147,7 +147,6 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 // Mirrors server-side mask_console_value(): fields named like secrets never render material.
 const SENSITIVE_KEY = /(token|secret|credential|password|api[-_]?key)/i;
 const mask = (key, v) => SENSITIVE_KEY.test(String(key ?? '')) ? '\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022\\u2022' : v;
-const maskObj = (obj) => Object.entries(obj || {}).map(([k,v]) => k + '=' + mask(k, v)).join(', ');
 function showTab(name) {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
   TABS.forEach(t => $('tab-'+t).classList.toggle('hidden', t !== name));
@@ -250,13 +249,11 @@ function approvalQueue(a) {
   return pill('pending use', 'ok');
 }
 
-function maskedCell(obj) {
-  return obj ? esc(maskObj(obj).slice(0, 120)) : '&mdash;';
-}
-
-// Server redacts sponsor PII to subject_hash; render a truncated, non-reversible label.
+// Server redacts sponsor PII to subject_hash; render a truncated, non-reversible
+// label. The empty fallback is a plain em-dash character (not an HTML entity)
+// so esc() at the call sites passes it through without double-escaping.
 function sponsorLabel(s) {
-  if (!s || !s.subject_hash) return '&mdash;';
+  if (!s || !s.subject_hash) return '\\u2014';
   return String(s.subject_hash).slice(0, 19) + '\\u2026';
 }
 
@@ -265,7 +262,6 @@ function approvalRow(a) {
     <td><strong>${esc(a.approval_id)}</strong><br/><span style="color:var(--dim)">task ${esc(a.task_id)}</span></td>
     <td>${esc(a.approval_type)}</td><td>${esc(a.approver_subject)}</td><td>${statusPill(a.decision.value || a.decision)}</td>
     <td>${approvalQueue(a)}</td>
-    <td>${maskedCell(a.subject)}</td>
     <td style="word-break:break-all">${esc(a.subject_hash)}</td>
     <td>${esc(a.created_at)}</td><td>${esc(a.expires_at)}</td><td>${esc(a.used_by_grant_id||'&mdash;')}</td></tr>`;
 }
@@ -273,7 +269,7 @@ function approvalRow(a) {
 async function loadApprovals() {
   const aps = await api('/v1/approvals');
   $('approval-rows').innerHTML = aps.length === 0
-    ? '<tr><td colspan="10" class="muted">No approvals recorded.</td></tr>'
+    ? '<tr><td colspan="9" class="muted">No approvals recorded.</td></tr>'
     : aps.map(approvalRow).join('');
 }
 
@@ -315,8 +311,8 @@ function renderTaskDepth(depth) {
         aps = depth.approvals || [], rs = depth.event_receipts || [];
   let html = '';
   html += '<p class="subhead">Checkpoints (' + cps.length + ')</p>';
-  html += cps.length === 0 ? '<p class="muted">None.</p>' : '<table><thead><tr><th>Checkpoint</th><th>State</th><th>Agent</th><th>Session</th><th>Memory refs</th><th>Pending subject (masked)</th><th>Created</th></tr></thead><tbody>'
-    + cps.map(c => `<tr><td>${esc(c.checkpoint_id)}</td><td>${esc(c.state)}@${esc(c.state_version)}</td><td>${esc(c.agent_id)}@${esc(c.agent_version)}</td><td>${esc(c.session_id)}</td><td>${esc((c.memory_refs||[]).length)}</td><td>${maskedCell(c.pending_subject)}</td><td>${esc(c.created_at)}</td></tr>`).join('')
+  html += cps.length === 0 ? '<p class="muted">None.</p>' : '<table><thead><tr><th>Checkpoint</th><th>State</th><th>Agent</th><th>Session</th><th>Memory refs</th><th>Pending subject hash</th><th>Created</th></tr></thead><tbody>'
+    + cps.map(c => `<tr><td>${esc(c.checkpoint_id)}</td><td>${esc(c.state)}@${esc(c.state_version)}</td><td>${esc(c.agent_id)}@${esc(c.agent_version)}</td><td>${esc(c.session_id)}</td><td>${esc((c.memory_refs||[]).length)}</td><td style="word-break:break-all">${esc(c.pending_subject_hash || '\\u2014')}</td><td>${esc(c.created_at)}</td></tr>`).join('')
     + '</tbody></table>';
   html += '<p class="subhead">Execution grants (' + gs.length + ') &mdash; tokens never displayed</p>';
   html += gs.length === 0 ? '<p class="muted">None.</p>' : '<table><thead><tr><th>Grant</th><th>Tool</th><th>Status</th><th>Issued</th><th>Expires</th><th>Consumed</th></tr></thead><tbody>'
