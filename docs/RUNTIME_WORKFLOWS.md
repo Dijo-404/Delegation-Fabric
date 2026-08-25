@@ -85,8 +85,7 @@ Pure function:
 def transition(
     current: TaskState,
     event: TaskEvent,
-) -> TaskState:
-    ...
+) -> TaskState: ...
 ```
 
 Do not let handlers assign arbitrary state strings.

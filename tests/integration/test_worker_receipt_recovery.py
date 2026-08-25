@@ -35,6 +35,13 @@ def store() -> MemoryStore:
     return MemoryStore()
 
 
+@pytest.fixture(autouse=True)
+def _reset_metrics() -> None:
+    from delegation_fabric_adapters.observability import METRICS
+
+    METRICS.reset()
+
+
 async def _seed_task(store: MemoryStore, task_id: str = "task_w") -> None:
     cp = create_control_plane(store=store)
     from httpx import ASGITransport
@@ -98,6 +105,12 @@ async def test_stuck_processing_receipt_is_reclaimed_after_lease(
         task_after = await store.get_task("task_w")
         assert task_after is not None
         assert task_after.state_version > version_while_leasing
+
+        # Day-7 observability: transition + duplicate counters on /metrics
+        worker_metrics = (await c.get("/metrics")).text
+        assert 'task_state_transition_total{from="created",to="running"} 1' in worker_metrics
+        assert "# TYPE task_state_transition_total counter" in worker_metrics
+        assert "event_duplicate_total 1" in worker_metrics
 
 
 @pytest.mark.asyncio

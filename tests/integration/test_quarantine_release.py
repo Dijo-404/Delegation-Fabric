@@ -30,6 +30,13 @@ def verifier(kms: LocalKMSSigner) -> JWSGrantVerifier:
     return v
 
 
+@pytest.fixture(autouse=True)
+def _reset_metrics() -> None:
+    from delegation_fabric_adapters.observability import METRICS
+
+    METRICS.reset()
+
+
 async def _setup(cp: AsyncClient) -> str:
     resp = await cp.post(
         "/v1/delegations",
@@ -112,6 +119,12 @@ async def test_poisoned_request_quarantines_task_and_release_restores(
         task = (await c.get("/v1/tasks/task_poison_01")).json()
         assert task["state"] == "quarantined"
 
+        # Day-7 observability: quarantine point emits labeled metrics
+        cp_metrics = (await c.get("/metrics")).text
+        assert 'quarantine_total{reason="CAPABILITY_NOT_DECLARED"} 1' in cp_metrics
+        assert 'task_state_transition_total{from="running",to="quarantined"} 1' in cp_metrics
+        assert 'grant_denied_total{reason="CAPABILITY_NOT_DECLARED"} 1' in cp_metrics
+
         # Denial evidence is in the audit chain; chain verifies
         audit = (await c.get("/v1/audit/tasks/task_poison_01")).json()
         assert any(
@@ -139,3 +152,9 @@ async def test_poisoned_request_quarantines_task_and_release_restores(
 
         released_audit = (await c.get("/v1/audit/tasks/task_poison_01")).json()
         assert any(e["event_type"] == "task.released" for e in released_audit)
+
+        # Human release is itself a successful state transition
+        cp_metrics_after = (await c.get("/metrics")).text
+        assert 'task_state_transition_total{from="quarantined",to="resuming"} 1' in (
+            cp_metrics_after
+        )

@@ -20,6 +20,7 @@ Enforces the strict 14-step verification sequence from docs/ARCHITECTURE.md § 6
 from __future__ import annotations
 
 import os
+import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -41,6 +42,7 @@ from delegation_fabric_core.models.policy import ReasonCode
 from delegation_fabric_core.models.task import TaskState
 from delegation_fabric_core.policy.projection import project_fields
 from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi.responses import PlainTextResponse
 
 if TYPE_CHECKING:
     from delegation_fabric_adapters.firestore.firestore_store import FirestoreStore
@@ -146,6 +148,7 @@ def create_app(
         request: Request,
         authorization: str = Header(..., description="Bearer <ExecutionGrant>"),
     ) -> dict[str, Any]:
+        _t0 = time.perf_counter()
         now = datetime.now(UTC)
         now_ts = int(now.timestamp())
 
@@ -408,6 +411,8 @@ def create_app(
         await db.append_audit_event(finalized_evt)
 
         METRICS.inc("tool_execution_total", tool=grant.tool, status="success")
+        execution_latency_ms = (time.perf_counter() - _t0) * 1000.0
+        METRICS.observe("gateway_execution_latency_ms", execution_latency_ms)
         log_event(
             "tool executed",
             task_id=grant.task_id,
@@ -417,6 +422,7 @@ def create_app(
             agent_version=grant.agent_version,
             tool=grant.tool,
             decision="allow",
+            latency_ms=round(execution_latency_ms, 2),
         )
 
         return {
@@ -426,8 +432,11 @@ def create_app(
         }
 
     @app.get("/metrics")
-    async def metrics() -> dict[str, Any]:
-        return {"counters": METRICS.snapshot()}
+    async def metrics() -> PlainTextResponse:
+        return PlainTextResponse(
+            METRICS.prometheus(),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     return app
 

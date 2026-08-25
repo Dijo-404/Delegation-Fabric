@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -55,7 +56,7 @@ from fastapi import FastAPI, Header, HTTPException, Request, status
 if TYPE_CHECKING:
     from delegation_fabric_adapters.firestore.firestore_store import FirestoreStore
     from delegation_fabric_adapters.kms.cloud_signer import CloudKMSSigner
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field, field_validator
 
 QUARANTINE_TRIGGERS = {
@@ -242,6 +243,7 @@ def create_app(
         detail: str,
         request_id: str,
         quarantine_task: bool = False,
+        latency_ms: float | None = None,
     ) -> JSONResponse:
         now = datetime.now(UTC)
         await _append_audit(
@@ -282,6 +284,11 @@ def create_app(
                 except ConcurrentTaskUpdateError:
                     quarantined = None  # racing writer won; skip duplicate quarantine
                 if quarantined is not None:
+                    METRICS.inc(
+                        "task_state_transition_total",
+                        **{"from": current.state.value, "to": quarantined.state.value},
+                    )
+                    METRICS.inc("quarantine_total", reason=reason_code.value)
                     await _append_audit(
                         AuditEvent(
                             audit_event_id=f"aud_{ulid_mod.ULID()}",
@@ -299,15 +306,18 @@ def create_app(
                     )
 
         METRICS.inc("grant_denied_total", reason=reason_code.value)
-        log_event(
-            "grant denied",
-            task_id=req.task_id,
-            delegation_id=req.delegation_id,
-            agent_id=req.agent.id,
-            tool=req.tool,
-            decision="deny",
-            reason_code=reason_code.value,
-        )
+        deny_fields: dict[str, Any] = {
+            "task_id": req.task_id,
+            "delegation_id": req.delegation_id,
+            "agent_id": req.agent.id,
+            "agent_version": req.agent.version,
+            "tool": req.tool,
+            "decision": "deny",
+            "reason_code": reason_code.value,
+        }
+        if latency_ms is not None:
+            deny_fields["latency_ms"] = round(latency_ms, 2)
+        log_event("grant denied", **deny_fields)
 
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -318,6 +328,9 @@ def create_app(
                 "request_id": request_id,
             },
         )
+
+    # Bound once so evaluate handlers can time the full denial path.
+    _deny_base = _deny
 
     # ─── 1. Delegations ────────────────────────────────────────────────────────
 
@@ -417,9 +430,22 @@ def create_app(
 
     @app.post("/v1/grants/evaluate", response_model=None)
     async def evaluate_grant(req: EvaluateGrantRequest) -> JSONResponse | dict[str, Any]:
+        _t0 = time.perf_counter()
         request_id = f"req_{ulid_mod.ULID()}"
         now = datetime.now(UTC)
         now_ts = int(now.timestamp())
+
+        async def _deny(
+            req: EvaluateGrantRequest,
+            reason_code: ReasonCode,
+            detail: str,
+            request_id: str,
+            quarantine_task: bool = False,
+        ) -> JSONResponse:
+            elapsed_ms = (time.perf_counter() - _t0) * 1000.0
+            return await _deny_base(
+                req, reason_code, detail, request_id, quarantine_task, elapsed_ms
+            )
 
         # Phase A-C: Delegation lookup, status, expiry, task binding
         delegation = await db.get_delegation(req.delegation_id)
@@ -653,6 +679,8 @@ def create_app(
             policy_version=policy.version,
         )
         token = kms_signer.sign_grant(grant)
+        issue_latency_ms = (time.perf_counter() - _t0) * 1000.0
+        METRICS.observe("grant_issue_latency_ms", issue_latency_ms)
 
         grant_record = GrantRecord(
             grant_id=grant_id,
@@ -679,8 +707,10 @@ def create_app(
             delegation_id=req.delegation_id,
             grant_id=grant_id,
             agent_id=req.agent.id,
+            agent_version=req.agent.version,
             tool=req.tool,
             decision="allow",
+            latency_ms=round(issue_latency_ms, 2),
         )
 
         # Audit the issuance itself with screening/semantic evidence attached
@@ -857,6 +887,7 @@ def create_app(
 
         now = datetime.now(UTC)
         expected_version = task.state_version
+        previous_state = task.state
         session_ref = [task.session_id]
 
         def _release(t: Task) -> None:
@@ -873,6 +904,11 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={"code": "STATE_VERSION_CONFLICT", "message": str(e)},
             ) from e
+
+        METRICS.inc(
+            "task_state_transition_total",
+            **{"from": previous_state.value, "to": task.state.value},
+        )
 
         await _append_audit(
             AuditEvent(
@@ -900,8 +936,11 @@ def create_app(
     # ─── 5. Registry read facade ───────────────────────────────────────────────
 
     @app.get("/metrics")
-    async def metrics() -> dict[str, Any]:
-        return {"counters": METRICS.snapshot()}
+    async def metrics() -> PlainTextResponse:
+        return PlainTextResponse(
+            METRICS.prometheus(),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     from apps.control_plane.console import register_console
 

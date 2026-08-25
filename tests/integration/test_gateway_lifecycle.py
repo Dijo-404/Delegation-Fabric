@@ -19,6 +19,13 @@ def kms_signer() -> LocalKMSSigner:
     return LocalKMSSigner()
 
 
+@pytest.fixture(autouse=True)
+def _reset_metrics() -> None:
+    from delegation_fabric_adapters.observability import METRICS
+
+    METRICS.reset()
+
+
 @pytest.fixture
 def jws_verifier(kms_signer: LocalKMSSigner) -> JWSGrantVerifier:
     verifier = JWSGrantVerifier()
@@ -104,6 +111,21 @@ async def test_full_grant_evaluation_and_execution_lifecycle(
         audit_res = audit_verify_resp.json()
         assert audit_res["valid"] is True
         assert audit_res["events"] == 2
+
+        # 6. Day-7 observability: gateway metrics in Prometheus text format
+        gw_metrics = (await gw_client.get("/metrics")).text
+        assert "# TYPE gateway_execution_latency_ms histogram" in gw_metrics
+        assert 'gateway_execution_latency_ms_bucket{le="+Inf"} 1' in gw_metrics
+        assert "gateway_execution_latency_ms_count 1" in gw_metrics
+        assert "gateway_execution_latency_ms_sum" in gw_metrics
+        assert 'tool_execution_total{status="success",tool="invoice.read"} 1' in gw_metrics
+        assert "grant_replay_total 1" in gw_metrics
+
+        cp_metrics = (await cp_client.get("/metrics")).text
+        assert "# TYPE grant_issue_latency_ms histogram" in cp_metrics
+        assert "grant_issue_latency_ms_count 1" in cp_metrics
+        assert "grant_issued_total 1" in cp_metrics
+        assert "grant_denied_total" not in cp_metrics
 
 
 @pytest.mark.asyncio

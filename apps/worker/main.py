@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -33,6 +34,7 @@ from delegation_fabric_core.models.event import EventEnvelope, EventType
 from delegation_fabric_core.models.task import Task, TaskEvent, TaskState
 from delegation_fabric_core.policy.state_machine import transition
 from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import PlainTextResponse
 
 if TYPE_CHECKING:
     from delegation_fabric_adapters.firestore.firestore_store import FirestoreStore
@@ -76,6 +78,10 @@ def _resolve_task_event(event_type: EventType, current_state: TaskState) -> Task
 
 
 def create_app(store: MemoryStore | FirestoreStore | None = None) -> FastAPI:
+    from delegation_fabric_adapters.observability import METRICS, configure_logging, log_event
+
+    configure_logging()
+
     app = FastAPI(title="Delegation Fabric Worker", version="0.1.0")
     db = store or MemoryStore()
 
@@ -110,6 +116,7 @@ def create_app(store: MemoryStore | FirestoreStore | None = None) -> FastAPI:
 
     @app.post("/internal/events/pubsub")
     async def handle_pubsub_event(req: PubSubPushRequest) -> dict[str, Any]:
+        _t0 = time.perf_counter()
         # Step 1: Decode Pub/Sub wrapper
         try:
             raw_bytes = base64.b64decode(req.message.data)
@@ -131,8 +138,6 @@ def create_app(store: MemoryStore | FirestoreStore | None = None) -> FastAPI:
             ) from e
         if not is_new_event:
             # Duplicate delivery safely acknowledged as a no-op
-            from delegation_fabric_adapters.observability import METRICS
-
             METRICS.inc("event_duplicate_total")
             return {"status": "duplicate_ignored", "event_id": envelope.event_id}
 
@@ -266,6 +271,23 @@ def create_app(store: MemoryStore | FirestoreStore | None = None) -> FastAPI:
         # Step 6: Mark event receipt complete only after full durable success
         await db.mark_event_complete(envelope.event_id)
 
+        METRICS.inc(
+            "task_state_transition_total",
+            **{"from": from_state.value, "to": task.state.value},
+        )
+        log_event(
+            "task transitioned",
+            task_id=task.task_id,
+            delegation_id=task.delegation_id,
+            agent_id=task.current_agent_id,
+            agent_version=task.current_agent_version,
+            event_type=envelope.event_type.value,
+            from_state=from_state.value,
+            to_state=task.state.value,
+            decision="allow",
+            latency_ms=round((time.perf_counter() - _t0) * 1000.0, 2),
+        )
+
         response: dict[str, Any] = {
             "status": "processed",
             "event_id": envelope.event_id,
@@ -280,6 +302,13 @@ def create_app(store: MemoryStore | FirestoreStore | None = None) -> FastAPI:
             },
         }
         return response
+
+    @app.get("/metrics")
+    async def metrics() -> PlainTextResponse:
+        return PlainTextResponse(
+            METRICS.prometheus(),
+            media_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
     return app
 

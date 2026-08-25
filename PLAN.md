@@ -1,6 +1,6 @@
 # Delegation Fabric — Build Plan
 
-Deadline: **31 August 2026, 17:00 PDT**  
+Deadline: **31 August 2026, 17:00 PDT**
 Planning start: **20 August 2026**
 
 This plan is optimized for a one-to-three-person hackathon team. It treats the authorization mechanism as the product and the console as evidence.
@@ -283,8 +283,7 @@ API:
 def evaluate_constraints(
     constraints: list[Constraint],
     arguments: JsonObject,
-) -> PolicyDecision:
-    ...
+) -> PolicyDecision: ...
 ```
 
 ### Response projection
@@ -293,8 +292,7 @@ def evaluate_constraints(
 def project_fields(
     payload: JsonValue,
     allowed_paths: list[str],
-) -> ProjectionResult:
-    ...
+) -> ProjectionResult: ...
 ```
 
 Test nested objects, arrays, absent paths, unknown fields and empty allow-lists.
