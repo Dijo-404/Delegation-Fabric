@@ -1,5 +1,7 @@
 """Integration tests for Control Plane, KMS, and Execution Gateway lifecycle."""
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from delegation_fabric_adapters.firestore.store import MemoryStore
 from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner
@@ -26,6 +28,11 @@ def _reset_metrics() -> None:
     METRICS.reset()
 
 
+def _future_expiry(days: int = 30) -> str:
+    """Relative delegation expiry so fixtures never rot past their date."""
+    return (datetime.now(UTC) + timedelta(days=days)).isoformat()
+
+
 @pytest.fixture
 def jws_verifier(kms_signer: LocalKMSSigner) -> JWSGrantVerifier:
     verifier = JWSGrantVerifier()
@@ -47,7 +54,7 @@ async def _issue_invoice_grant(
             "task_id": task_id,
             "allowed_agents": [agent_id],
             "allowed_regions": ["asia-south1"],
-            "expires_at": "2026-09-01T00:00:00Z",
+            "expires_at": _future_expiry(),
         },
         headers={"x-authenticated-user": "user:priya@example.com"},
     )
@@ -196,7 +203,7 @@ async def test_full_grant_evaluation_and_execution_lifecycle(
                 "task_id": "task_1001",
                 "allowed_agents": ["invoice-reconciliation", "treasury-approval"],
                 "allowed_regions": ["asia-south1"],
-                "expires_at": "2026-09-01T00:00:00Z",
+                "expires_at": _future_expiry(),
             },
             headers={"x-authenticated-user": "user:priya@example.com"},
         )
@@ -291,7 +298,7 @@ async def test_treasury_payment_requires_approval_and_sod(
                 "task_id": "task_2002",
                 "allowed_agents": ["treasury-approval"],
                 "allowed_regions": ["asia-south1"],
-                "expires_at": "2026-09-01T00:00:00Z",
+                "expires_at": _future_expiry(),
             },
             headers={"x-authenticated-user": "user:priya@example.com"},
         )

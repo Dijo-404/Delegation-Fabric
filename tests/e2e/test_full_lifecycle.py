@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import json
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -54,7 +55,7 @@ async def _create_delegation(cp: AsyncClient, task_id: str) -> str:
                 "treasury-approval",
             ],
             "allowed_regions": ["asia-south1"],
-            "expires_at": "2026-09-01T00:00:00Z",
+            "expires_at": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
         },
         headers={"x-authenticated-user": "user:priya@example.com"},
     )

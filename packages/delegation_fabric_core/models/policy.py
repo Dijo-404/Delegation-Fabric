@@ -18,6 +18,7 @@ class ReasonCode(str, Enum):
 
     # Task binding
     TASK_NOT_BOUND_TO_DELEGATION = "TASK_NOT_BOUND_TO_DELEGATION"
+    TASK_NOT_LIVE = "TASK_NOT_LIVE"
 
     # Agent
     AGENT_NOT_ALLOWED = "AGENT_NOT_ALLOWED"

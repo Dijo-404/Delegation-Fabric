@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from delegation_fabric_adapters.firestore.store import MemoryStore
@@ -158,3 +159,86 @@ async def test_poisoned_request_quarantines_task_and_release_restores(
         assert 'task_state_transition_total{from="quarantined",to="resuming"} 1' in (
             cp_metrics_after
         )
+
+
+@pytest.mark.asyncio
+async def test_grant_issuance_denied_while_quarantined_then_allowed_after_release(
+    store: MemoryStore, kms: LocalKMSSigner, verifier: JWSGrantVerifier
+) -> None:
+    """Defense-in-depth: the Control Plane refuses grant issuance for a
+    quarantined task at the source; after human release returns the task to a
+    live state, issuance is allowed again."""
+    cp = create_control_plane(store=store, signer=kms)
+    from apps.worker.main import create_app as create_worker
+
+    worker = create_worker(store=store)
+
+    async with (
+        AsyncClient(transport=ASGITransport(app=cp), base_url="http://cp") as c,
+        AsyncClient(transport=ASGITransport(app=worker), base_url="http://w") as w,
+    ):
+        did = await _setup(c)
+
+        # Advance task to RUNNING
+        import base64 as b64
+        import json as jsonlib
+
+        envelope = {
+            "event_id": "evt_start_gate",
+            "event_type": "task.start",
+            "task_id": "task_poison_01",
+            "occurred_at": datetime.now(UTC).isoformat(),
+            "source": "control-plane",
+            "schema_version": "1",
+            "data": {},
+        }
+        start_resp = await w.post(
+            "/internal/events/pubsub",
+            json={"message": {"data": b64.b64encode(jsonlib.dumps(envelope).encode()).decode()}},
+        )
+        assert start_resp.status_code == 200
+
+        async def _evaluate(tool: str, arguments: dict[str, object]) -> Any:
+            return await c.post(
+                "/v1/grants/evaluate",
+                json={
+                    "task_id": "task_poison_01",
+                    "delegation_id": did,
+                    "agent": {"id": "invoice-reconciliation", "version": "1.0.0"},
+                    "tool": tool,
+                    "arguments": arguments,
+                },
+            )
+
+        # While RUNNING, benign issuance is allowed
+        before = await _evaluate("invoice.read", {"invoice_id": "INV-042"})
+        assert before.status_code == 200
+        assert before.json()["decision"] == "allow"
+
+        # Poisoned request -> deny + quarantine
+        poison = await _evaluate("vendor_bank_account.read", {"vendor_id": "V-1001"})
+        assert poison.status_code == 403
+        assert poison.json()["reason_code"] == "CAPABILITY_NOT_DECLARED"
+        assert (await c.get("/v1/tasks/task_poison_01")).json()["state"] == "quarantined"
+
+        # While QUARANTINED, even benign issuance is denied at the source
+        during = await _evaluate("invoice.read", {"invoice_id": "INV-042"})
+        assert during.status_code == 403
+        assert during.json()["decision"] == "deny"
+        assert during.json()["reason_code"] == "TASK_NOT_LIVE"
+        assert "token" not in during.json()
+
+        # Human release returns the task to a live state
+        release = await c.post(
+            "/v1/tasks/task_poison_01/release",
+            json={"expected_state": "quarantined", "reason": "document manually reviewed"},
+            headers={"x-authenticated-user": "user:priya@example.com"},
+        )
+        assert release.status_code == 200
+        assert release.json()["state"] == "resuming"
+
+        # After release, issuance is re-allowed
+        after = await _evaluate("invoice.read", {"invoice_id": "INV-042"})
+        assert after.status_code == 200
+        assert after.json()["decision"] == "allow"
+        assert "token" in after.json()

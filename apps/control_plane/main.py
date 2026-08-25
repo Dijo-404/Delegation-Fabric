@@ -474,6 +474,21 @@ def create_app(
                 request_id,
             )
 
+        # Phase A3: Task liveness at issuance — fail closed at the source.
+        # Mirrors the gateway's Step 8b so a quarantined or terminal task can
+        # neither execute nor mint fresh credentials (defense-in-depth).
+        task = await db.get_task(req.task_id)
+        if task is None or task.state.is_terminal() or task.state == TaskState.QUARANTINED:
+            return await _deny(
+                req,
+                ReasonCode.TASK_NOT_BOUND_TO_DELEGATION
+                if task is None
+                else ReasonCode.TASK_NOT_LIVE,
+                f"Task {req.task_id} is not in a live state"
+                + (f" (state={task.state.value})" if task else ""),
+                request_id,
+            )
+
         # Phase D: Agent allowed by delegation scope
         if delegation.allowed_agents and req.agent.id not in delegation.allowed_agents:
             return await _deny(

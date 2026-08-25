@@ -7,14 +7,22 @@ Proves the two critical hackathon attack containment properties:
 
 import base64 as b64
 import json as jsonlib
+from datetime import UTC, datetime, timedelta
 
 import pytest
+from delegation_fabric_adapters.config import grant_audience, grant_issuer
 from delegation_fabric_adapters.firestore.store import MemoryStore
 from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner
+from delegation_fabric_core.models.grant import ExecutionGrant
 from httpx import ASGITransport, AsyncClient
 
 from apps.control_plane.main import create_app as create_control_plane
 from apps.execution_gateway.main import create_app as create_execution_gateway
+
+
+def _future_expiry(days: int = 30) -> str:
+    """Relative delegation expiry so fixtures never rot past their date."""
+    return (datetime.now(UTC) + timedelta(days=days)).isoformat()
 
 
 @pytest.fixture
@@ -44,7 +52,9 @@ async def test_attack_1_prompt_injection_denied(
 
     Manifest for invoice-reconciliation explicitly denies vendor_bank_account.read.
     Control Plane denies grant issuance deterministically AND quarantines the task;
-    a fresh valid grant on the same task is still blocked at execution time.
+    afterwards the Control Plane refuses ALL further grant issuance for the
+    quarantined task, and the gateway independently blocks execution (belt and
+    suspenders).
     """
     cp_app = create_control_plane(store=shared_store, signer=kms_signer)
     gw_app = create_execution_gateway(store=shared_store, verifier=jws_verifier)
@@ -68,7 +78,7 @@ async def test_attack_1_prompt_injection_denied(
                 "task_id": "task_poison_001",
                 "allowed_agents": ["invoice-reconciliation"],
                 "allowed_regions": ["asia-south1"],
-                "expires_at": "2026-09-01T00:00:00Z",
+                "expires_at": _future_expiry(),
             },
             headers={"x-authenticated-user": "user:priya@example.com"},
         )
@@ -121,8 +131,9 @@ async def test_attack_1_prompt_injection_denied(
         verify = (await cp_client.get("/v1/audit/tasks/task_poison_001/verify")).json()
         assert verify["valid"] is True
 
-        # Defense-in-depth: a fresh, otherwise-valid grant on the quarantined task
-        # is still blocked at execution time by gateway task-liveness enforcement.
+        # Defense-in-depth layer 1: once quarantined, the Control Plane itself
+        # refuses to issue ANY grant — even an otherwise-valid benign one — for
+        # the task. Fail closed at the source, not only at execution time.
         fresh = await cp_client.post(
             "/v1/grants/evaluate",
             json={
@@ -133,21 +144,47 @@ async def test_attack_1_prompt_injection_denied(
                 "arguments": {"invoice_id": "INV-042"},
             },
         )
+        assert fresh.status_code == 403
         fresh_data = fresh.json()
-        if fresh_data.get("decision") == "allow":
-            exec_resp = await gw_client.post(
-                "/v1/execute",
-                json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-                headers={
-                    "Authorization": f"Bearer {fresh_data['token']}",
-                    "X-Agent-Id": "invoice-reconciliation",
-                    "X-Agent-Version": "1.0.0",
-                },
-            )
-            assert exec_resp.status_code == 403
-            assert exec_resp.json()["detail"]["code"] == "TASK_NOT_LIVE"
-        else:
-            pytest.fail("Control plane issued no decision for a benign follow-up grant")
+        assert fresh_data["decision"] == "deny"
+        assert fresh_data["reason_code"] == "TASK_NOT_LIVE"
+        assert "token" not in fresh_data
+
+        # Defense-in-depth layer 2 (belt and suspenders): even a grant that
+        # somehow exists for the quarantined task is still blocked at
+        # execution time by gateway task-liveness enforcement. Mint one
+        # directly with the KMS signer to bypass the (now refusing) Control
+        # Plane and prove the gateway independently holds the line.
+        now = datetime.now(UTC)
+        now_ts = int(now.timestamp())
+        ghost_grant = ExecutionGrant(
+            jti="grt_ghost_quarantine_001",
+            iss=grant_issuer(),
+            aud=grant_audience(),
+            delegation_id=delegation_id,
+            task_id="task_poison_001",
+            agent_id="invoice-reconciliation",
+            agent_version="1.0.0",
+            human_sponsor="user:priya@example.com",
+            purpose="invoice_reconciliation",
+            tool="invoice.read",
+            region="asia-south1",
+            iat=now_ts,
+            nbf=now_ts,
+            exp=now_ts + 300,
+            policy_version="test",
+        )
+        exec_resp = await gw_client.post(
+            "/v1/execute",
+            json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
+            headers={
+                "Authorization": f"Bearer {kms_signer.sign_grant(ghost_grant)}",
+                "X-Agent-Id": "invoice-reconciliation",
+                "X-Agent-Version": "1.0.0",
+            },
+        )
+        assert exec_resp.status_code == 403
+        assert exec_resp.json()["detail"]["code"] == "TASK_NOT_LIVE"
 
 
 @pytest.mark.asyncio
@@ -172,7 +209,7 @@ async def test_attack_2_cross_agent_escalation_denied(
                 "task_id": "task_escalate_002",
                 "allowed_agents": ["invoice-reconciliation"],
                 "allowed_regions": ["asia-south1"],
-                "expires_at": "2026-09-01T00:00:00Z",
+                "expires_at": _future_expiry(),
             },
             headers={"x-authenticated-user": "user:priya@example.com"},
         )

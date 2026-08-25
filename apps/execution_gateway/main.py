@@ -285,7 +285,7 @@ def create_app(
                 detail={
                     "code": ReasonCode.TASK_NOT_BOUND_TO_DELEGATION.value
                     if task is None
-                    else "TASK_NOT_LIVE",
+                    else ReasonCode.TASK_NOT_LIVE.value,
                     "message": f"Task {grant.task_id!r} is not in a live state"
                     + (f" (state={task.state.value})" if task else ""),
                 },

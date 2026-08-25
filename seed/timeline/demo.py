@@ -24,7 +24,7 @@ if str(_ROOT) not in sys.path:
 if str(_ROOT / "packages") not in sys.path:
     sys.path.insert(0, str(_ROOT / "packages"))
 
-from datetime import UTC, datetime  # noqa: E402
+from datetime import UTC, datetime, timedelta  # noqa: E402
 
 from delegation_fabric_adapters.firestore.store import MemoryStore  # noqa: E402
 from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSigner  # noqa: E402
@@ -89,7 +89,7 @@ async def run_demo() -> None:
                     "treasury-approval",
                 ],
                 "allowed_regions": ["asia-south1"],
-                "expires_at": "2026-09-01T00:00:00Z",
+                "expires_at": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
             },
             headers={"x-authenticated-user": "user:priya@example.com"},
         )
