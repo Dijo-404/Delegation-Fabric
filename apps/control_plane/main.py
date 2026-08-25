@@ -38,6 +38,7 @@ from delegation_fabric_core.constraints.engine import evaluate_constraints
 from delegation_fabric_core.errors.exceptions import ConcurrentTaskUpdateError
 from delegation_fabric_core.models.approval import ApprovalDecision, ApprovalRecord
 from delegation_fabric_core.models.audit import AuditActor, AuditActorType, AuditEvent
+from delegation_fabric_core.models.checkpoint import TaskCheckpoint
 from delegation_fabric_core.models.constraint import Constraint, ConstraintOp
 from delegation_fabric_core.models.delegation import Delegation, DelegationStatus, Sponsor
 from delegation_fabric_core.models.event import EventEnvelope, EventType
@@ -60,6 +61,42 @@ QUARANTINE_TRIGGERS = {
     ReasonCode.CAPABILITY_NOT_DECLARED,
     ReasonCode.OUTSIDE_BUSINESS_PURPOSE,
 }
+
+
+def _subject_digest(subject: dict[str, Any]) -> str:
+    """SHA-256 over the canonical JSON encoding, matching ApprovalRecord.subject_hash."""
+    return f"sha256:{hashlib.sha256(canonical_json(subject).encode('utf-8')).hexdigest()}"
+
+
+def _sponsor_view(sponsor: Sponsor) -> dict[str, str]:
+    """Non-identifying sponsor projection for unauthenticated read facades."""
+    digest = hashlib.sha256(sponsor.subject.encode("utf-8")).hexdigest()
+    return {"subject_hash": f"sha256:{digest}"}
+
+
+def _approval_view(approval: ApprovalRecord) -> dict[str, Any]:
+    """Approval projection with the raw subject payload redacted to its hash."""
+    return {
+        "approval_id": approval.approval_id,
+        "task_id": approval.task_id,
+        "delegation_id": approval.delegation_id,
+        "approval_type": approval.approval_type,
+        "subject_hash": approval.subject_hash,
+        "decision": approval.decision.value,
+        "approver_subject": approval.approver_subject,
+        "created_at": approval.created_at.isoformat(),
+        "expires_at": approval.expires_at.isoformat(),
+        "used_by_grant_id": approval.used_by_grant_id,
+        "policy_version": approval.policy_version,
+    }
+
+
+def _checkpoint_view(checkpoint: TaskCheckpoint) -> dict[str, Any]:
+    """Checkpoint projection with the raw pending subject redacted to its hash."""
+    view = checkpoint.model_dump(mode="json", exclude={"pending_subject"})
+    if checkpoint.pending_subject:
+        view["pending_subject_hash"] = _subject_digest(checkpoint.pending_subject)
+    return view
 
 
 class CreateDelegationRequest(BaseModel):
@@ -722,8 +759,7 @@ def create_app(
         expires_at = datetime.fromtimestamp(now.timestamp() + req.expires_in_seconds, tz=UTC)
         approver = x_authenticated_user or "user:arun@example.com"
 
-        subject_canonical = canonical_json(req.subject)
-        subject_hash = f"sha256:{hashlib.sha256(subject_canonical.encode('utf-8')).hexdigest()}"
+        subject_hash = _subject_digest(req.subject)
 
         approval = ApprovalRecord(
             approval_id=approval_id,
@@ -902,7 +938,7 @@ def create_app(
         return [
             {
                 "delegation_id": d.delegation_id,
-                "sponsor": d.sponsor.subject,
+                "sponsor": _sponsor_view(d.sponsor),
                 "purpose": d.purpose,
                 "task_id": d.task_id,
                 "status": d.status.value,
@@ -922,7 +958,7 @@ def create_app(
             )
         return {
             "delegation_id": d.delegation_id,
-            "sponsor": d.sponsor.model_dump(mode="json"),
+            "sponsor": _sponsor_view(d.sponsor),
             "purpose": d.purpose,
             "task_id": d.task_id,
             "allowed_agents": d.allowed_agents,
@@ -939,23 +975,7 @@ def create_app(
     async def list_all_approvals() -> list[dict[str, Any]]:
         approvals = await db.list_all_approvals()
         approvals.sort(key=lambda a: a.created_at, reverse=True)
-        return [
-            {
-                "approval_id": a.approval_id,
-                "task_id": a.task_id,
-                "delegation_id": a.delegation_id,
-                "approval_type": a.approval_type,
-                "subject": a.subject,
-                "subject_hash": a.subject_hash,
-                "decision": a.decision.value,
-                "approver_subject": a.approver_subject,
-                "created_at": a.created_at.isoformat(),
-                "expires_at": a.expires_at.isoformat(),
-                "used_by_grant_id": a.used_by_grant_id,
-                "policy_version": a.policy_version,
-            }
-            for a in approvals
-        ]
+        return [_approval_view(a) for a in approvals]
 
     # ─── 7. Task depth (console Task Inspector) ───────────────────────────────
 
@@ -969,9 +989,9 @@ def create_app(
         approvals = await db.list_approvals(task_id)
         receipts = await db.list_event_receipts(task_id)
         return {
-            "checkpoints": [c.model_dump(mode="json") for c in checkpoints],
+            "checkpoints": [_checkpoint_view(c) for c in checkpoints],
             "grants": [g.model_dump(mode="json") for g in grants],
-            "approvals": [a.model_dump(mode="json") for a in approvals],
+            "approvals": [_approval_view(a) for a in approvals],
             "event_receipts": receipts,
         }
 

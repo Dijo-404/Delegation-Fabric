@@ -33,6 +33,7 @@ _SAFE_INTERPOLATION_PREFIXES = (
     "revokedCell(",
     "durationRow(",
     "maskedCell(",
+    "sponsorLabel(",
 )
 
 _UNSAFE_INTERPOLATION_RE = re.compile(

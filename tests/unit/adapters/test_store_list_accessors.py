@@ -152,3 +152,22 @@ async def test_list_accessors_on_empty_store_return_empty_lists() -> None:
     assert await store.list_grants("t") == []
     assert await store.list_checkpoints("t") == []
     assert await store.list_event_receipts("t") == []
+
+
+async def test_list_accessors_honor_default_and_explicit_limits() -> None:
+    store = MemoryStore()
+    for i in range(3):
+        await store.put_delegation(_delegation(f"dlg_{i}"))
+        await store.put_approval(_approval(f"apr_{i}", task_id=f"task_{i}"))
+        await store.put_checkpoint(_checkpoint(f"cp_{i}", task_id=f"task_{i}"))
+        await store.put_grant(_grant(f"grt_{i}", task_id=f"task_{i}"))
+
+    assert len(await store.list_delegations()) == 3
+    assert len(await store.list_delegations(limit=None)) == 3
+    assert len(await store.list_delegations(limit=1)) == 1
+    assert {a.approval_id for a in await store.list_all_approvals(limit=2)} == {
+        "apr_0",
+        "apr_1",
+    }
+    assert len(await store.list_grants("task_2", limit=1)) == 1
+    assert len(await store.list_checkpoints("task_2", limit=1)) == 1

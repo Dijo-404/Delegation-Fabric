@@ -214,7 +214,7 @@ async function loadDelegations() {
   $('delegation-rows').innerHTML = ds.length === 0
     ? '<tr><td colspan="6" class="muted">No delegations recorded.</td></tr>'
     : ds.map(d => `<tr class="clickable" data-delegation="${esc(d.delegation_id)}">
-      <td>${esc(d.sponsor)}</td><td>${esc(d.purpose)}</td><td>${statusPill(d.status)}</td>
+      <td>${esc(sponsorLabel(d.sponsor))}</td><td>${esc(d.purpose)}</td><td>${statusPill(d.status)}</td>
       <td>${esc(d.task_id)}</td><td>${esc(d.created_at)}</td><td>${esc(d.expires_at)}</td></tr>`).join('');
 }
 $('delegation-rows').addEventListener('click', async (ev) => {
@@ -222,9 +222,7 @@ $('delegation-rows').addEventListener('click', async (ev) => {
   if (!tr) return;
   try {
     const d = await api('/v1/delegations/' + encodeURIComponent(tr.dataset.delegation));
-    const sponsorLine = d.sponsor.subject
-      + (d.sponsor.display_name ? ' (' + d.sponsor.display_name + ')' : '')
-      + (d.sponsor.department ? ' \u00b7 ' + d.sponsor.department : '');
+    const sponsorLine = sponsorLabel(d.sponsor);
     $('delegation-detail').innerHTML = `
       <h2 style="margin-top:0">Delegation ${esc(d.delegation_id)} ${statusPill(d.status)}</h2>
       <table>
@@ -254,6 +252,12 @@ function approvalQueue(a) {
 
 function maskedCell(obj) {
   return obj ? esc(maskObj(obj).slice(0, 120)) : '&mdash;';
+}
+
+// Server redacts sponsor PII to subject_hash; render a truncated, non-reversible label.
+function sponsorLabel(s) {
+  if (!s || !s.subject_hash) return '&mdash;';
+  return String(s.subject_hash).slice(0, 19) + '\\u2026';
 }
 
 function approvalRow(a) {

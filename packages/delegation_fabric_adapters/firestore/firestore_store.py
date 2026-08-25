@@ -27,10 +27,14 @@ from delegation_fabric_core.models.delegation import Delegation
 from delegation_fabric_core.models.event import EventEnvelope
 from delegation_fabric_core.models.grant import GrantRecord, GrantStatus
 from delegation_fabric_core.models.task import Task
+from google.cloud.firestore import FieldFilter
 
 if TYPE_CHECKING:
     from google.cloud.firestore_v1.base_document import DocumentSnapshot
     from google.cloud.firestore_v1.transaction import Transaction
+
+
+DEFAULT_LIST_LIMIT = 200
 
 
 def _snapshot(result: Any) -> DocumentSnapshot:
@@ -71,9 +75,14 @@ class FirestoreStore:
 
         return await asyncio.to_thread(_get)
 
-    async def list_delegations(self) -> list[Delegation]:
+    async def list_delegations(self, limit: int | None = DEFAULT_LIST_LIMIT) -> list[Delegation]:
         def _list() -> list[Delegation]:
-            docs = self._db.collection("delegations").stream()
+            query = self._db.collection("delegations").order_by(
+                "created_at", direction="DESCENDING"
+            )
+            if limit is not None:
+                query = query.limit(limit)
+            docs = query.stream()
             return [Delegation.model_validate(d.to_dict() or {}) for d in docs]
 
         return await asyncio.to_thread(_list)
@@ -151,15 +160,18 @@ class FirestoreStore:
 
         return await asyncio.to_thread(_get)
 
-    async def list_checkpoints(self, task_id: str) -> list[TaskCheckpoint]:
+    async def list_checkpoints(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[TaskCheckpoint]:
         def _list() -> list[TaskCheckpoint]:
-            from google.cloud.firestore import FieldFilter
-
-            docs = (
+            query = (
                 self._db.collection("checkpoints")
                 .where(filter=FieldFilter("task_id", "==", task_id))
-                .stream()
+                .order_by("__name__")
             )
+            if limit is not None:
+                query = query.limit(limit)
+            docs = query.stream()
             return [TaskCheckpoint.model_validate(d.to_dict() or {}) for d in docs]
 
         return await asyncio.to_thread(_list)
@@ -182,15 +194,18 @@ class FirestoreStore:
 
         return await asyncio.to_thread(_get)
 
-    async def list_grants(self, task_id: str) -> list[GrantRecord]:
+    async def list_grants(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[GrantRecord]:
         def _list() -> list[GrantRecord]:
-            from google.cloud.firestore import FieldFilter
-
-            docs = (
+            query = (
                 self._db.collection("grants")
                 .where(filter=FieldFilter("task_id", "==", task_id))
-                .stream()
+                .order_by("__name__")
             )
+            if limit is not None:
+                query = query.limit(limit)
+            docs = query.stream()
             return [GrantRecord.model_validate(d.to_dict() or {}) for d in docs]
 
         return await asyncio.to_thread(_list)
@@ -263,22 +278,30 @@ class FirestoreStore:
 
         return await asyncio.to_thread(_get)
 
-    async def list_all_approvals(self) -> list[ApprovalRecord]:
+    async def list_all_approvals(
+        self, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[ApprovalRecord]:
         def _list() -> list[ApprovalRecord]:
-            docs = self._db.collection("approvals").stream()
+            query = self._db.collection("approvals").order_by("created_at", direction="DESCENDING")
+            if limit is not None:
+                query = query.limit(limit)
+            docs = query.stream()
             return [ApprovalRecord.model_validate(d.to_dict() or {}) for d in docs]
 
         return await asyncio.to_thread(_list)
 
-    async def list_event_receipts(self, task_id: str) -> list[dict[str, Any]]:
+    async def list_event_receipts(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[dict[str, Any]]:
         def _list() -> list[dict[str, Any]]:
-            from google.cloud.firestore import FieldFilter
-
-            docs = (
+            query = (
                 self._db.collection("event_receipts")
                 .where(filter=FieldFilter("task_id", "==", task_id))
-                .stream()
+                .order_by("__name__")
             )
+            if limit is not None:
+                query = query.limit(limit)
+            docs = query.stream()
             return [d.to_dict() or {} for d in docs]
 
         return await asyncio.to_thread(_list)

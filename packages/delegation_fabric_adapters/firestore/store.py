@@ -22,6 +22,8 @@ from delegation_fabric_core.models.event import EventEnvelope
 from delegation_fabric_core.models.grant import GrantRecord, GrantStatus
 from delegation_fabric_core.models.task import Task
 
+DEFAULT_LIST_LIMIT = 200
+
 
 class MemoryStore:
     """Thread/Async-safe in-memory store simulating Firestore for tests and local runtime."""
@@ -47,10 +49,11 @@ class MemoryStore:
             d = self.delegations.get(delegation_id)
             return d.model_copy() if d else None
 
-    async def list_delegations(self) -> list[Delegation]:
+    async def list_delegations(self, limit: int | None = DEFAULT_LIST_LIMIT) -> list[Delegation]:
         """Read-only listing for the console Delegations view (unsorted)."""
         async with self._lock:
-            return [d.model_copy() for d in self.delegations.values()]
+            listed = [d.model_copy() for d in self.delegations.values()]
+            return listed if limit is None else listed[:limit]
 
     # ─── Task CRUD & Transitions ───────────────────────────────────────────────
 
@@ -94,10 +97,13 @@ class MemoryStore:
         async with self._lock:
             return self.checkpoints.get(checkpoint_id)
 
-    async def list_checkpoints(self, task_id: str) -> list[TaskCheckpoint]:
+    async def list_checkpoints(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[TaskCheckpoint]:
         """Read-only checkpoint history for the console Task Inspector."""
         async with self._lock:
-            return [c.model_copy() for c in self.checkpoints.values() if c.task_id == task_id]
+            listed = [c.model_copy() for c in self.checkpoints.values() if c.task_id == task_id]
+            return listed if limit is None else listed[:limit]
 
     # ─── Grant Lifecycle & Atomic Consumption ───────────────────────────────────
 
@@ -109,10 +115,13 @@ class MemoryStore:
         async with self._lock:
             return self.grants.get(grant_id)
 
-    async def list_grants(self, task_id: str) -> list[GrantRecord]:
+    async def list_grants(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[GrantRecord]:
         """Read-only grant history for the console Task Inspector."""
         async with self._lock:
-            return [g.model_copy() for g in self.grants.values() if g.task_id == task_id]
+            listed = [g.model_copy() for g in self.grants.values() if g.task_id == task_id]
+            return listed if limit is None else listed[:limit]
 
     async def consume_grant_atomic(self, grant_id: str, now: datetime | None = None) -> GrantRecord:
         """Atomically transition grant status from ISSUED to CONSUMED."""
@@ -149,15 +158,21 @@ class MemoryStore:
         async with self._lock:
             return [a for a in self.approvals.values() if a.task_id == task_id]
 
-    async def list_all_approvals(self) -> list[ApprovalRecord]:
+    async def list_all_approvals(
+        self, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[ApprovalRecord]:
         """Read-only approval queue listing for the console Approvals view (unsorted)."""
         async with self._lock:
-            return [a.model_copy() for a in self.approvals.values()]
+            listed = [a.model_copy() for a in self.approvals.values()]
+            return listed if limit is None else listed[:limit]
 
-    async def list_event_receipts(self, task_id: str) -> list[dict[str, Any]]:
+    async def list_event_receipts(
+        self, task_id: str, limit: int | None = DEFAULT_LIST_LIMIT
+    ) -> list[dict[str, Any]]:
         """Read-only idempotency receipts for the console Task Inspector."""
         async with self._lock:
-            return [dict(r) for r in self.event_receipts.values() if r.get("task_id") == task_id]
+            listed = [dict(r) for r in self.event_receipts.values() if r.get("task_id") == task_id]
+            return listed if limit is None else listed[:limit]
 
     # ─── Event Receipt Idempotency ─────────────────────────────────────────────
 
