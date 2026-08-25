@@ -20,10 +20,22 @@ from typing import Any, Protocol
 from pydantic import BaseModel
 from ulid import ULID
 
+from delegation_fabric_adapters.constants import DEFAULT_FETCH_CAP
+
 MEMORY_COLLECTION = "memory_entries"
 DEFAULT_SEARCH_LIMIT = 5
+MEMORY_FETCH_CAP = DEFAULT_FETCH_CAP
+"""Server-side fetch window: newest-first entries capped before scoring."""
+MAX_MEMORY_CONTENT_CHARS = 10_000
+"""Hard bound on persisted memory entry content (characters)."""
 
 _TOKEN_RE = re.compile(r"[a-z0-9_]+")
+
+
+def _validate_content(content: str) -> None:
+    if len(content) > MAX_MEMORY_CONTENT_CHARS:
+        msg = f"memory content is {len(content)} chars; max allowed is {MAX_MEMORY_CONTENT_CHARS}"
+        raise ValueError(msg)
 
 
 class MemoryHit(BaseModel):
@@ -55,7 +67,13 @@ def score_content(query: str, content: str) -> float:
 
 class MemoryPort(Protocol):
     async def write(self, session_id: str, content: str) -> str:
-        """Persist an entry for the session and return its reference id."""
+        """Persist an entry for the session and return its reference id.
+
+        Implementations must reject content longer than
+        ``MAX_MEMORY_CONTENT_CHARS`` with ``ValueError``. Content is stored
+        verbatim: Model Armor / Sensitive Data Protection screening is the
+        managed-path counterpart and is NOT applied here (PLAN.md section 6).
+        """
         ...
 
     async def search(
@@ -72,6 +90,7 @@ class InMemoryMemoryStore:
         self._entries: dict[str, dict[str, str]] = {}
 
     async def write(self, session_id: str, content: str) -> str:
+        _validate_content(content)
         ref = f"mem_{ULID()}"
         self._entries.setdefault(session_id, {})[ref] = content
         return ref
@@ -92,9 +111,13 @@ class FirestoreMemoryStore:
     """Firestore-backed memory (collection memory_entries).
 
     Documents carry session_id/content/created_at; search filters by
-    session_id server-side then scores contents client-side so ranking is
-    identical to the in-memory fallback. The google-cloud-firestore client is
-    imported lazily; blocking SDK calls run via asyncio.to_thread.
+    session_id server-side, orders newest-first and caps the fetch window at
+    ``MEMORY_FETCH_CAP`` documents before scoring contents client-side, so
+    ranking is identical to the in-memory fallback without a full collection
+    scan (older entries beyond the cap are not scored). The
+    google-cloud-firestore client is imported lazily; blocking SDK calls run
+    via asyncio.to_thread. Content is stored verbatim: Armor/SDP screening is
+    the managed-path counterpart, NOT applied here.
     """
 
     def __init__(self, project_id: str | None = None) -> None:
@@ -109,9 +132,10 @@ class FirestoreMemoryStore:
         return self._db
 
     async def write(self, session_id: str, content: str) -> str:
-        db = self._ensure_db()
+        _validate_content(content)
 
         def _write() -> str:
+            db = self._ensure_db()
             ref = f"mem_{ULID()}"
             payload = {
                 "session_id": session_id,
@@ -126,13 +150,15 @@ class FirestoreMemoryStore:
     async def search(
         self, session_id: str, query: str, limit: int = DEFAULT_SEARCH_LIMIT
     ) -> list[MemoryHit]:
-        db = self._ensure_db()
-
         def _search() -> list[MemoryHit]:
-            from google.cloud.firestore import FieldFilter
+            db = self._ensure_db()
+            from google.cloud.firestore import FieldFilter, Query
 
-            docs_query = db.collection(MEMORY_COLLECTION).where(
-                filter=FieldFilter("session_id", "==", session_id)
+            docs_query = (
+                db.collection(MEMORY_COLLECTION)
+                .where(filter=FieldFilter("session_id", "==", session_id))
+                .order_by("created_at", direction=Query.DESCENDING)
+                .limit(MEMORY_FETCH_CAP)
             )
             hits: list[MemoryHit] = []
             for doc in docs_query.stream():
@@ -162,7 +188,9 @@ __all__ = [
     "DEFAULT_SEARCH_LIMIT",
     "FirestoreMemoryStore",
     "InMemoryMemoryStore",
+    "MAX_MEMORY_CONTENT_CHARS",
     "MEMORY_COLLECTION",
+    "MEMORY_FETCH_CAP",
     "MemoryHit",
     "MemoryPort",
     "create_memory_from_env",

@@ -61,7 +61,8 @@ class _CollectionRef:
     def where(self, **_kwargs: Any) -> Any:
         return self
 
-    def order_by(self, *_args: Any, **_kwargs: Any) -> Any:
+    def order_by(self, *args: Any, **_kwargs: Any) -> Any:
+        self._db.applied_order_by = tuple(args)
         return self
 
     def limit(self, count: int) -> Any:
@@ -80,6 +81,7 @@ class _FakeDb:
 
     def __init__(self) -> None:
         self.docs: dict[str, dict[str, Any]] = {}
+        self.applied_order_by: tuple[Any, ...] | None = None
         self.applied_limit: int | None = None
 
     def collection(self, name: str) -> Any:
@@ -165,7 +167,24 @@ async def test_firestore_registry_list_maps_documents_and_applies_limit() -> Non
     registry, db = _firestore_registry(docs)
     listed = await registry.list(limit=2)
     assert [m.agent_id for m in listed] == ["a_agent", "b_agent"]
+    assert db.applied_order_by == ("agent_id",)
     assert db.applied_limit == 2
+
+
+async def test_firestore_registry_empty_document_raises_value_error() -> None:
+    registry, _db = _firestore_registry({"ghost_agent": {}})
+    with pytest.raises(ValueError, match="registry doc .* empty"):
+        await registry.get("ghost_agent")
+
+
+async def test_firestore_registry_empty_document_in_listing_raises_value_error() -> None:
+    docs = {
+        "a_agent": _manifest("a_agent").model_dump(mode="json"),
+        "z_broken": {},
+    }
+    registry, _db = _firestore_registry(docs)
+    with pytest.raises(ValueError, match="z_broken.*empty"):
+        await registry.list()
 
 
 async def test_firestore_registry_lazy_client_defers_google_import() -> None:

@@ -6,6 +6,7 @@ async workflow callable; no google-adk dependency is required.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -92,6 +93,65 @@ async def test_resume_unknown_session_raises_key_error() -> None:
     runtime = LocalRunnerRuntime(_echo_workflow)
     with pytest.raises(KeyError):
         await runtime.resume("sess_does_not_exist")
+
+
+async def test_concurrent_resume_on_the_same_session_is_rejected() -> None:
+    started = asyncio.Event()
+
+    async def slow_workflow(_payload: dict[str, Any]) -> dict[str, Any]:
+        started.set()
+        await asyncio.sleep(0.05)
+        return {"done": True}
+
+    runtime = LocalRunnerRuntime(slow_workflow)
+    ref = await runtime.start("agent_x", {"k": "v"})
+    first = asyncio.create_task(runtime.resume(ref.session_id))
+    await started.wait()
+    second = asyncio.create_task(runtime.resume(ref.session_id))
+    outcomes = await asyncio.gather(first, second, return_exceptions=True)
+    results = [o for o in outcomes if isinstance(o, RunResult)]
+    errors = [o for o in outcomes if isinstance(o, BaseException)]
+    assert len(results) == 1
+    assert results[0].status == "completed"
+    assert len(errors) == 1
+    assert isinstance(errors[0], RuntimeError)
+    assert "single-caller" in str(errors[0])
+
+
+async def test_sequential_resumes_still_work_and_rerun_the_workflow() -> None:
+    calls: list[int] = []
+
+    async def counting_workflow(_payload: dict[str, Any]) -> dict[str, Any]:
+        calls.append(len(calls) + 1)
+        return {"run": len(calls)}
+
+    runtime = LocalRunnerRuntime(counting_workflow)
+    ref = await runtime.start("agent_x", {})
+    first = await runtime.resume(ref.session_id)
+    second = await runtime.resume(ref.session_id)
+    assert calls == [1, 2]
+    assert first.status == "completed"
+    assert second.status == "completed"
+    first_output: dict[str, Any] = first.output  # type: ignore[assignment]
+    second_output: dict[str, Any] = second.output  # type: ignore[assignment]
+    assert (first_output["run"], second_output["run"]) == (1, 2)
+
+
+async def test_resume_guard_is_released_after_failure() -> None:
+    attempts: list[int] = []
+
+    async def flaky(_payload: dict[str, Any]) -> dict[str, Any]:
+        attempts.append(1)
+        msg = "boom"
+        raise RuntimeError(msg)
+
+    runtime = LocalRunnerRuntime(flaky)
+    ref = await runtime.start("agent_x", {})
+    failed = await runtime.resume(ref.session_id)
+    assert failed.status == "failed"
+    retried = await runtime.resume(ref.session_id)
+    assert retried.status == "failed"
+    assert len(attempts) == 2
 
 
 async def test_failing_workflow_yields_failed_run_result() -> None:

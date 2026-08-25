@@ -10,6 +10,8 @@ from typing import Any
 
 import pytest
 from delegation_fabric_adapters.memory import (
+    MAX_MEMORY_CONTENT_CHARS,
+    MEMORY_FETCH_CAP,
     FirestoreMemoryStore,
     InMemoryMemoryStore,
     MemoryPort,
@@ -40,7 +42,9 @@ class _FakeDb:
         self.docs: dict[str, dict[str, Any]] = {}
         self.next_id = 0
         self.filters: list[tuple[str, str]] = []
+        self.applied_order_by: tuple[str, Any] | None = None
         self.applied_limit: int | None = None
+        self.fetched_order: list[str] | None = None
         self.collection_name = collection_name
 
     def collection(self, name: str) -> Any:
@@ -88,14 +92,23 @@ class _FilteredQuery(_CollectionRef):
         super().__init__(db)
         self._docs = docs
 
+    def order_by(self, field_path: str, *, direction: Any = None) -> Any:
+        self._db.applied_order_by = (field_path, direction)
+        return self
+
     def limit(self, count: int) -> Any:
         self._db.applied_limit = count
         return self
 
     def stream(self) -> list[_Snapshot]:
-        ids = sorted(self._docs)
+        ids = sorted(
+            self._docs,
+            key=lambda doc_id: str(self._docs[doc_id].get("created_at", "")),
+            reverse=True,
+        )
         if self._db.applied_limit is not None:
             ids = ids[: self._db.applied_limit]
+        self._db.fetched_order = list(ids)
         return [_Snapshot(doc_id, self._docs[doc_id]) for doc_id in ids]
 
 
@@ -148,6 +161,28 @@ async def test_inmemory_empty_session_returns_empty() -> None:
     assert await InMemoryMemoryStore().search("nothing_here", "anything") == []
 
 
+# ─── Content bound ───────────────────────────────────────────────────────────
+
+
+async def test_inmemory_write_rejects_oversized_content() -> None:
+    store = InMemoryMemoryStore()
+    with pytest.raises(ValueError, match=f"max allowed is {MAX_MEMORY_CONTENT_CHARS}"):
+        await store.write("s", "x" * (MAX_MEMORY_CONTENT_CHARS + 1))
+
+
+async def test_inmemory_write_accepts_content_at_the_bound() -> None:
+    store = InMemoryMemoryStore()
+    ref = await store.write("s", "x" * MAX_MEMORY_CONTENT_CHARS)
+    assert ref
+
+
+async def test_firestore_write_rejects_oversized_content_before_io() -> None:
+    store, db = _firestore_store()
+    with pytest.raises(ValueError, match="max allowed"):
+        await store.write("s", "y" * (MAX_MEMORY_CONTENT_CHARS + 1))
+    assert db.docs == {}
+
+
 # ─── FirestoreMemoryStore ────────────────────────────────────────────────────
 
 
@@ -195,9 +230,42 @@ async def test_firestore_search_applies_limit_after_ranking() -> None:
     entries = [(f"s{i}", f"report {i} details") for i in range(4)]
     store, db = _firestore_store(entries)
     hits = await store.search("s0", "report", limit=1)
+    # The caller-facing limit truncates the client-side ranked list, not the server query.
     assert len(hits) == 1
-    # The limit truncates the client-side ranked list, not the server query.
-    assert db.applied_limit is None
+
+
+async def test_firestore_search_bounds_fetch_server_side() -> None:
+    entries = [(f"s{i}", f"report {i} details") for i in range(4)]
+    store, db = _firestore_store(entries)
+    hits = await store.search("s0", "report", limit=2)
+    # The server query orders newest-first and caps the fetch window at MEMORY_FETCH_CAP.
+    assert db.applied_order_by == ("created_at", "DESCENDING")
+    assert db.applied_limit == MEMORY_FETCH_CAP
+    assert all(h.score > 0.0 for h in hits)
+
+
+async def test_firestore_search_fetches_newest_first_then_reranks_client_side() -> None:
+    docs = {
+        "doc_a": {
+            "session_id": "s",
+            "content": "alpha payout",
+            "created_at": "2026-01-01T00:00:00",
+        },
+        "doc_b": {"session_id": "s", "content": "beta payout", "created_at": "2026-03-01T00:00:00"},
+        "doc_c": {
+            "session_id": "s",
+            "content": "gamma payout",
+            "created_at": "2026-02-01T00:00:00",
+        },
+    }
+    store = FirestoreMemoryStore(project_id="proj-test")
+    db = _FakeDb()
+    db.docs.update(docs)
+    store._db = db
+    hits = await store.search("s", "payout")
+    # Server returns newest-first; deterministic scoring re-ranks afterwards.
+    assert db.fetched_order == ["doc_b", "doc_c", "doc_a"]
+    assert [h.content for h in hits] == ["alpha payout", "beta payout", "gamma payout"]
 
 
 async def test_firestore_search_unknown_session_is_empty() -> None:

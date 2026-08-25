@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Awaitable, Callable
-from typing import Protocol
+from typing import Literal, Protocol
 
 from delegation_fabric_core.models.policy import JsonObject, JsonValue
 from pydantic import BaseModel
@@ -29,7 +29,7 @@ class RunResult(BaseModel):
     """Outcome of a (re)started agent run."""
 
     session_id: str
-    status: str  # "completed" | "failed"
+    status: Literal["completed", "failed"]
     output: JsonValue = None
     error: str = ""
 
@@ -38,22 +38,36 @@ WorkflowFn = Callable[[JsonObject], Awaitable[JsonValue]]
 
 
 class RuntimePort(Protocol):
+    """Contract for starting and resuming agent workflow sessions.
+
+    Resume contract: ``resume`` is single-caller per session — implementations
+    must reject concurrent resumes on the same ``session_id``. Calling
+    ``resume`` repeatedly in sequence is allowed and re-runs the workflow each
+    time by design: this port keeps no durable execution history, so callers
+    that need once-only semantics must coordinate upstream.
+    """
+
     async def start(self, agent_id: str, input_data: JsonObject) -> SessionRef:
         """Start a session for the agent and return its reference."""
         ...
 
     async def resume(self, session_id: str, checkpoint: JsonObject | None = None) -> RunResult:
-        """Continue the session from stored state plus the provided checkpoint."""
+        """Continue the session from stored state plus the provided checkpoint.
+
+        Single-caller per session; concurrent resume attempts must raise.
+        Sequential resumes re-run the workflow (see class docstring).
+        """
         ...
 
 
 class _SessionState:
-    __slots__ = ("agent_id", "input_data", "output")
+    __slots__ = ("agent_id", "in_progress", "input_data", "output")
 
     def __init__(self, agent_id: str, input_data: JsonObject) -> None:
         self.agent_id = agent_id
         self.input_data = input_data
         self.output: JsonValue = None
+        self.in_progress = False
 
 
 class LocalRunnerRuntime:
@@ -63,7 +77,9 @@ class LocalRunnerRuntime:
     executes (or re-executes) the workflow with the original input merged
     under any checkpoint keys the caller supplies, returning a RunResult.
     Failures are captured as ``RunResult(status="failed")`` so orchestrators
-    can branch on results without exception plumbing.
+    can branch on results without exception plumbing. Concurrent resumes on
+    one session are rejected with RuntimeError while a resume is in flight;
+    repeated sequential resumes intentionally re-run the workflow.
     """
 
     def __init__(self, workflow: WorkflowFn) -> None:
@@ -93,16 +109,25 @@ class LocalRunnerRuntime:
             state = self._sessions[session_id]
         except KeyError:
             raise KeyError(f"Unknown runtime session {session_id!r}") from None
-        payload = self._merge(state.input_data, checkpoint)
-        try:
-            state.output = await self._workflow(payload)
-            return RunResult(
-                session_id=session_id,
-                status="completed",
-                output=state.output,
+        if state.in_progress:
+            msg = (
+                f"Runtime session {session_id!r} is already resuming; "
+                "resume is single-caller per session"
             )
+            raise RuntimeError(msg)
+        state.in_progress = True
+        try:
+            payload = self._merge(state.input_data, checkpoint)
+            state.output = await self._workflow(payload)
         except Exception as exc:
             return RunResult(session_id=session_id, status="failed", error=str(exc))
+        finally:
+            state.in_progress = False
+        return RunResult(
+            session_id=session_id,
+            status="completed",
+            output=state.output,
+        )
 
 
 def create_runtime_from_env(workflow: WorkflowFn) -> RuntimePort:
