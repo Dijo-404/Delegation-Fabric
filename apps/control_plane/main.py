@@ -329,7 +329,9 @@ def create_app(
             },
         )
 
-    # Bound once so evaluate handlers can time the full denial path.
+    # Bound once so evaluate handlers can time the decision path only:
+    # elapsed_ms is sampled before _deny_base runs, so the reported latency
+    # excludes the denial audit append and quarantine writes.
     _deny_base = _deny
 
     # ─── 1. Delegations ────────────────────────────────────────────────────────
@@ -680,7 +682,6 @@ def create_app(
         )
         token = kms_signer.sign_grant(grant)
         issue_latency_ms = (time.perf_counter() - _t0) * 1000.0
-        METRICS.observe("grant_issue_latency_ms", issue_latency_ms)
 
         grant_record = GrantRecord(
             grant_id=grant_id,
@@ -700,7 +701,12 @@ def create_app(
         if approval_ids and valid_sod is not None:
             valid_sod.used_by_grant_id = grant_id
             await db.put_approval(valid_sod)
+
+        # Post-durable emission: both metrics fire only after the grant and
+        # approval binding are persisted, so histogram count stays consistent
+        # with grant_issued_total.
         METRICS.inc("grant_issued_total")
+        METRICS.observe("grant_issue_latency_ms", issue_latency_ms)
         log_event(
             "grant issued",
             task_id=req.task_id,

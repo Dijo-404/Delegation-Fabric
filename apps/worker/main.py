@@ -271,6 +271,9 @@ def create_app(store: MemoryStore | FirestoreStore | None = None) -> FastAPI:
         # Step 6: Mark event receipt complete only after full durable success
         await db.mark_event_complete(envelope.event_id)
 
+        # Resume intentionally collapses awaiting_webhook/awaiting_approval/
+        # quarantined -> running into a single reported hop: the intermediate
+        # RESUMING state is not emitted, mirroring the from/to audit metadata.
         METRICS.inc(
             "task_state_transition_total",
             **{"from": from_state.value, "to": task.state.value},

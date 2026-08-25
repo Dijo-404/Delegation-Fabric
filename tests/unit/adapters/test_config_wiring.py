@@ -129,6 +129,7 @@ async def test_mint_verify_round_trip_honors_env_override() -> None:
 @pytest.mark.asyncio
 async def test_env_override_flows_through_mint_and_verify_round_trip(
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setenv("DF_GRANT_ISSUER", "df-cp-staging")
     monkeypatch.setenv("DF_GRANT_AUDIENCE", "df-gw-staging")
@@ -176,6 +177,7 @@ async def test_env_override_flows_through_mint_and_verify_round_trip(
     async with AsyncClient(transport=ASGITransport(app=gw_app), base_url="http://gw.test") as gw:
         ok_resp = await gw.post("/v1/execute", json=body, headers=headers)
         assert ok_resp.status_code == 200
+        assert '"latency_ms"' in capsys.readouterr().out  # GW executed log record
 
         monkeypatch.setenv("DF_GRANT_ISSUER", "df-cp-somewhere-else")
         stale_resp = await gw.post("/v1/execute", json=body, headers=headers)

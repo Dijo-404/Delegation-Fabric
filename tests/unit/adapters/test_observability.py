@@ -199,6 +199,20 @@ def test_log_event_without_otel_graceful_noop(
     assert "trace_id" not in fields
 
 
+@pytest.fixture
+def isolated_logger(monkeypatch: pytest.MonkeyPatch) -> Iterator[logging.Logger]:
+    """Snapshot shared logger state so configure_logging() mutations are undone.
+
+    configure_logging() replaces handlers, level and propagate on the module
+    logger; without teardown those mutations leak into other tests.
+    """
+    logger = logging.getLogger("delegation_fabric")
+    monkeypatch.setattr(logger, "handlers", logger.handlers[:])
+    monkeypatch.setattr(logger, "level", logger.level)
+    monkeypatch.setattr(logger, "propagate", logger.propagate)
+    return logger
+
+
 def test_explicit_trace_id_wins_over_active_span(
     monkeypatch: pytest.MonkeyPatch, captured_records: list[logging.LogRecord]
 ) -> None:
@@ -212,7 +226,9 @@ def test_explicit_trace_id_wins_over_active_span(
 
 
 def test_json_formatter_emits_trace_id_field(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    isolated_logger: logging.Logger,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     from opentelemetry import trace as otel_trace
 

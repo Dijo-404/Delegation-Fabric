@@ -115,7 +115,14 @@ class _HistogramSeries:
 
 
 class Metrics:
-    """Process-local monotonic counters and bounded-bucket latency histograms."""
+    """Process-local monotonic counters and bounded-bucket latency histograms.
+
+    Single-event-loop constraint: there is deliberately no thread-safety
+    lock. Mutation is safe from async handlers because plain int/dict
+    read-modify-write steps never yield to the event loop mid-update, so all
+    access is effectively serialized on one loop. A future sync threadpool
+    endpoint touching these metrics would need to add a lock.
+    """
 
     def __init__(self) -> None:
         self._counters: dict[tuple[str, _LabelKey], int] = {}
