@@ -33,6 +33,147 @@ def jws_verifier(kms_signer: LocalKMSSigner) -> JWSGrantVerifier:
     return verifier
 
 
+async def _issue_invoice_grant(
+    cp_client: AsyncClient,
+    task_id: str,
+    agent_id: str = "invoice-reconciliation",
+    agent_version: str = "1.0.0",
+) -> str:
+    """Create an active delegation + evaluate a single-use invoice.read grant."""
+    del_resp = await cp_client.post(
+        "/v1/delegations",
+        json={
+            "purpose": "invoice_reconciliation",
+            "task_id": task_id,
+            "allowed_agents": [agent_id],
+            "allowed_regions": ["asia-south1"],
+            "expires_at": "2026-09-01T00:00:00Z",
+        },
+        headers={"x-authenticated-user": "user:priya@example.com"},
+    )
+    assert del_resp.status_code == 201
+    delegation_id = del_resp.json()["delegation_id"]
+
+    eval_resp = await cp_client.post(
+        "/v1/grants/evaluate",
+        json={
+            "task_id": task_id,
+            "delegation_id": delegation_id,
+            "agent": {"id": agent_id, "version": agent_version},
+            "tool": "invoice.read",
+            "arguments": {"invoice_id": "INV-042"},
+        },
+    )
+    assert eval_resp.status_code == 200
+    return eval_resp.json()["token"]
+
+
+def _execute_headers(token: str, agent_id: str, agent_version: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Agent-Id": agent_id,
+        "X-Agent-Version": agent_version,
+    }
+
+
+@pytest.mark.asyncio
+async def test_gateway_requires_agent_identity_headers(
+    shared_store: MemoryStore,
+    kms_signer: LocalKMSSigner,
+    jws_verifier: JWSGrantVerifier,
+):
+    """Fail-closed: X-Agent-Id / X-Agent-Version are mandatory (400 before grant verification)."""
+    cp_app = create_control_plane(store=shared_store, signer=kms_signer)
+    gw_app = create_execution_gateway(store=shared_store, verifier=jws_verifier)
+
+    async with (
+        AsyncClient(transport=ASGITransport(app=cp_app), base_url="http://cp.test") as cp_client,
+        AsyncClient(transport=ASGITransport(app=gw_app), base_url="http://gw.test") as gw_client,
+    ):
+        body = {"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}}
+
+        # Missing X-Agent-Id -> 400, grant must NOT be consumed
+        token_a = await _issue_invoice_grant(cp_client, "task_hdr_no_id")
+        resp = await gw_client.post(
+            "/v1/execute",
+            json=body,
+            headers={"Authorization": f"Bearer {token_a}", "X-Agent-Version": "1.0.0"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["detail"]["code"] == "MISSING_AGENT_ID"
+
+        # Missing X-Agent-Version -> 400, grant must NOT be consumed
+        token_b = await _issue_invoice_grant(cp_client, "task_hdr_no_ver")
+        resp = await gw_client.post(
+            "/v1/execute",
+            json=body,
+            headers={"Authorization": f"Bearer {token_b}", "X-Agent-Id": "invoice-reconciliation"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["detail"]["code"] == "MISSING_AGENT_VERSION"
+
+        # Neither credential was burned by the malformed attempts
+        ok = await gw_client.post(
+            "/v1/execute",
+            json=body,
+            headers=_execute_headers(token_a, "invoice-reconciliation", "1.0.0"),
+        )
+        assert ok.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_gateway_denies_agent_identity_mismatch_with_reason_and_log(
+    shared_store: MemoryStore,
+    kms_signer: LocalKMSSigner,
+    jws_verifier: JWSGrantVerifier,
+    capsys: pytest.CaptureFixture[str],
+):
+    """Header id/version must agree with the signed grant claims at execution time."""
+    cp_app = create_control_plane(store=shared_store, signer=kms_signer)
+    gw_app = create_execution_gateway(store=shared_store, verifier=jws_verifier)
+
+    async with (
+        AsyncClient(transport=ASGITransport(app=cp_app), base_url="http://cp.test") as cp_client,
+        AsyncClient(transport=ASGITransport(app=gw_app), base_url="http://gw.test") as gw_client,
+    ):
+        body = {"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}}
+
+        # Wrong agent id vs grant claim
+        token_a = await _issue_invoice_grant(cp_client, "task_hdr_bad_id")
+        resp = await gw_client.post(
+            "/v1/execute",
+            json=body,
+            headers=_execute_headers(token_a, "treasury-approval", "1.0.0"),
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"]["code"] == "GRANT_AGENT_MISMATCH"
+
+        # Right id but stale/wrong version vs pinned grant claim
+        token_b = await _issue_invoice_grant(cp_client, "task_hdr_bad_ver")
+        resp = await gw_client.post(
+            "/v1/execute",
+            json=body,
+            headers=_execute_headers(token_b, "invoice-reconciliation", "9.9.9"),
+        )
+        assert resp.status_code == 403
+        assert resp.json()["detail"]["code"] == "GRANT_AGENT_MISMATCH"
+
+        from delegation_fabric_adapters.observability import METRICS
+
+        assert METRICS.snapshot()["grant_denied_total{reason=GRANT_AGENT_MISMATCH}"] == 2
+        log_out = capsys.readouterr().out
+        assert '"field": "agent_id"' in log_out or '"field":"agent_id"' in log_out
+        assert '"field": "agent_version"' in log_out or '"field":"agent_version"' in log_out
+
+        # Mismatched attempts did not consume either grant
+        ok = await gw_client.post(
+            "/v1/execute",
+            json=body,
+            headers=_execute_headers(token_b, "invoice-reconciliation", "1.0.0"),
+        )
+        assert ok.status_code == 200
+
+
 @pytest.mark.asyncio
 async def test_full_grant_evaluation_and_execution_lifecycle(
     shared_store: MemoryStore,
@@ -84,7 +225,7 @@ async def test_full_grant_evaluation_and_execution_lifecycle(
                 "tool": "invoice.read",
                 "arguments": {"invoice_id": "INV-042"},
             },
-            headers={"Authorization": f"Bearer {token}"},
+            headers=_execute_headers(token, "invoice-reconciliation", "1.0.0"),
         )
         assert exec_resp.status_code == 200
         result = exec_resp.json()["result"]
@@ -100,7 +241,7 @@ async def test_full_grant_evaluation_and_execution_lifecycle(
                 "tool": "invoice.read",
                 "arguments": {"invoice_id": "INV-042"},
             },
-            headers={"Authorization": f"Bearer {token}"},
+            headers=_execute_headers(token, "invoice-reconciliation", "1.0.0"),
         )
         assert replay_resp.status_code == 403
         assert replay_resp.json()["detail"]["code"] == "GRANT_REPLAYED"
@@ -226,7 +367,7 @@ async def test_treasury_payment_requires_approval_and_sod(
                 "tool": "payment.instruct",
                 "arguments": {"batch_id": "PB-88", "amount_minor": 74200000, "currency": "INR"},
             },
-            headers={"Authorization": f"Bearer {token}"},
+            headers=_execute_headers(token, "treasury-approval", "1.0.3"),
         )
         assert pay_exec.status_code == 200
         assert pay_exec.json()["result"]["status"] == "accepted"

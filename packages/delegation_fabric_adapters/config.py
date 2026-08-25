@@ -113,6 +113,7 @@ def build_erp_backend() -> ERPBackend:
 
 
 __all__ = [
+    "DEFAULT_DEPLOYMENT_REGION",
     "build_erp_backend",
     "build_publisher",
     "build_signer",

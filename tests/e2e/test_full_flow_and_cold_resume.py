@@ -119,7 +119,11 @@ async def test_section9_single_flow_delegation_to_payment_to_chain(
         inv = await g.post(
             "/v1/execute",
             json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-            headers={"Authorization": f"Bearer {grant_r.json()['token']}"},
+            headers={
+                "Authorization": f"Bearer {grant_r.json()['token']}",
+                "X-Agent-Id": "invoice-reconciliation",
+                "X-Agent-Version": "1.0.0",
+            },
         )
         assert inv.status_code == 200
 
@@ -165,10 +169,15 @@ async def test_section9_single_flow_delegation_to_payment_to_chain(
             },
         )
         assert pay_grant.json()["decision"] == "allow"
+        pay_headers = {
+            "Authorization": f"Bearer {pay_grant.json()['token']}",
+            "X-Agent-Id": "treasury-approval",
+            "X-Agent-Version": "1.0.3",
+        }
         pay_exec = await g.post(
             "/v1/execute",
             json={"tool": "payment.instruct", "arguments": payment_args},
-            headers={"Authorization": f"Bearer {pay_grant.json()['token']}"},
+            headers=pay_headers,
         )
         assert pay_exec.status_code == 200
         assert pay_exec.json()["result"]["status"] == "accepted"
@@ -178,7 +187,7 @@ async def test_section9_single_flow_delegation_to_payment_to_chain(
             await g.post(
                 "/v1/execute",
                 json={"tool": "payment.instruct", "arguments": payment_args},
-                headers={"Authorization": f"Bearer {pay_grant.json()['token']}"},
+                headers=pay_headers,
             )
         ).status_code == 403
 
@@ -278,6 +287,10 @@ async def test_section10_aged_checkpoint_cold_resume_fresh_grant(
         exec_resp = await g.post(
             "/v1/execute",
             json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-            headers={"Authorization": f"Bearer {fresh.json()['token']}"},
+            headers={
+                "Authorization": f"Bearer {fresh.json()['token']}",
+                "X-Agent-Id": "invoice-reconciliation",
+                "X-Agent-Version": "1.0.0",
+            },
         )
         assert exec_resp.status_code == 200

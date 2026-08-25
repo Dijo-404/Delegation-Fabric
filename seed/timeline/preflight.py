@@ -96,10 +96,15 @@ async def check_services() -> None:
             f"decision={grant_resp.get('decision')}",
         )
 
+        exec_headers = {
+            "Authorization": f"Bearer {grant_resp.get('token', '')}",
+            "X-Agent-Id": "invoice-reconciliation",
+            "X-Agent-Version": "1.0.0",
+        }
         exec_resp = await gw_c.post(
             "/v1/execute",
             json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-            headers={"Authorization": f"Bearer {grant_resp.get('token', '')}"},
+            headers=exec_headers,
         )
         check(
             "Execution Gateway executes invoice.read",
@@ -110,7 +115,7 @@ async def check_services() -> None:
         replay = await gw_c.post(
             "/v1/execute",
             json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-            headers={"Authorization": f"Bearer {grant_resp.get('token', '')}"},
+            headers=exec_headers,
         )
         check("Replay rejected (single-use)", replay.status_code == 403)
 

@@ -45,6 +45,8 @@ async def test_tools_request_grant_before_gateway_execution() -> None:
 
     def gw_handler(request: httpx.Request) -> httpx.Response:
         call_order.append("gateway")
+        assert request.headers["X-Agent-Id"] == "procurement-exception"
+        assert request.headers["X-Agent-Version"] == "1.0.0"
         return httpx.Response(200, json={"result": {"vendor_id": "V-1"}})
 
     cp_route = respx.post(f"{CP_BASE}/v1/grants/evaluate").mock(side_effect=cp_handler)

@@ -117,7 +117,11 @@ async def run_demo() -> None:
         exec_resp = await gw.post(
             "/v1/execute",
             json={"tool": "invoice.read", "arguments": {"invoice_id": clean_invoice_id}},
-            headers={"Authorization": f"Bearer {grant_token}"},
+            headers={
+                "Authorization": f"Bearer {grant_token}",
+                "X-Agent-Id": "invoice-reconciliation",
+                "X-Agent-Version": "1.0.0",
+            },
         )
         print(f" -> Result: {exec_resp.json()['result']}")
 
@@ -187,7 +191,11 @@ async def run_demo() -> None:
                 "tool": "payment.instruct",
                 "arguments": {"batch_id": "PB-88", "amount_minor": 74200000, "currency": "INR"},
             },
-            headers={"Authorization": f"Bearer {pay_token}"},
+            headers={
+                "Authorization": f"Bearer {pay_token}",
+                "X-Agent-Id": "treasury-approval",
+                "X-Agent-Version": "1.0.3",
+            },
         )
         print(f" -> Payment Settled: {pay_exec.json()['result']}")
 
@@ -279,7 +287,11 @@ async def run_demo() -> None:
             exec_i = await gw.post(
                 "/v1/execute",
                 json={"tool": "invoice.read", "arguments": {"invoice_id": inv["invoice_id"]}},
-                headers={"Authorization": f"Bearer {token_i}"},
+                headers={
+                    "Authorization": f"Bearer {token_i}",
+                    "X-Agent-Id": "invoice-reconciliation",
+                    "X-Agent-Version": "1.0.0",
+                },
             )
             po_id = exec_i.json().get("result", {}).get("po_id")
             if po_id:

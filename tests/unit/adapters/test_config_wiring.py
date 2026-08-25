@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 from delegation_fabric_adapters.config import (
+    DEFAULT_DEPLOYMENT_REGION,
     DEFAULT_GRANT_AUDIENCE,
     DEFAULT_GRANT_ISSUER,
     deployment_region,
@@ -20,7 +21,12 @@ from delegation_fabric_adapters.kms.signer import JWSGrantVerifier, LocalKMSSign
 from httpx import ASGITransport, AsyncClient
 
 from apps.control_plane.main import create_app as create_control_plane
-from apps.execution_gateway.main import create_app as create_execution_gateway
+from apps.execution_gateway.main import (
+    create_app as create_execution_gateway,
+)
+from apps.execution_gateway.main import (
+    create_app_from_env as create_gateway_from_env,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -59,7 +65,16 @@ def test_region_prefers_location_then_falls_back_then_default(
     assert deployment_region() == "us-central1"
 
     monkeypatch.delenv("GOOGLE_CLOUD_REGION")
-    assert deployment_region() == "asia-south1"
+    assert deployment_region() == DEFAULT_DEPLOYMENT_REGION == "asia-south1"
+
+
+def test_gateway_env_factory_wires_tracing_without_otel_stack(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """create_app_from_env must configure tracing gracefully with no OTel/GCP env."""
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    app = create_gateway_from_env()
+    assert app.title == "Delegation Fabric Execution Gateway"
 
 
 def _grant_claims(token: str) -> dict[str, Any]:
@@ -76,6 +91,14 @@ def _delegation_body(task_id: str, regions: list[str]) -> dict[str, Any]:
         "allowed_agents": ["invoice-reconciliation"],
         "allowed_regions": regions,
         "expires_at": expires,
+    }
+
+
+def _gw_headers(token: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {token}",
+        "X-Agent-Id": "invoice-reconciliation",
+        "X-Agent-Version": "1.0.0",
     }
 
 
@@ -121,7 +144,7 @@ async def test_mint_verify_round_trip_honors_env_override() -> None:
         exec_resp = await gw.post(
             "/v1/execute",
             json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-            headers={"Authorization": f"Bearer {token}"},
+            headers=_gw_headers(token),
         )
         assert exec_resp.status_code == 200
 
@@ -172,7 +195,7 @@ async def test_env_override_flows_through_mint_and_verify_round_trip(
     assert claims["aud"] == "df-gw-staging"
 
     body = {"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}}
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = _gw_headers(token)
 
     async with AsyncClient(transport=ASGITransport(app=gw_app), base_url="http://gw.test") as gw:
         ok_resp = await gw.post("/v1/execute", json=body, headers=headers)
@@ -227,6 +250,6 @@ async def test_gateway_region_check_follows_location_variable(
         exec_resp = await gw.post(
             "/v1/execute",
             json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-            headers={"Authorization": f"Bearer {token}"},
+            headers=_gw_headers(token),
         )
         assert exec_resp.status_code == 200

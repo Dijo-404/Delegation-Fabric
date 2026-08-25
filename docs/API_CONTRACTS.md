@@ -189,7 +189,14 @@ Do not mint a token on deny.
 ```http
 POST /v1/execute
 Authorization: Bearer <Execution Grant>
+X-Agent-Id: <agent id>
+X-Agent-Version: <agent version>
 ```
+
+Both identity headers are mandatory and fail closed: a missing header is a
+`400` before grant verification; an id/version that disagrees with the signed
+grant claims is denied `403 GRANT_AGENT_MISMATCH` without consuming the
+single-use grant.
 
 Request:
 

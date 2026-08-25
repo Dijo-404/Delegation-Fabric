@@ -57,7 +57,11 @@ class ProtectedTools:
         exec_resp = await self.gw.post(
             "/v1/execute",
             json={"tool": tool, "arguments": arguments},
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Agent-Id": self.agent_id,
+                "X-Agent-Version": self.agent_version,
+            },
         )
         if exec_resp.status_code != 200:
             return {"error": "EXECUTION_FAILED", "detail": exec_resp.json()}

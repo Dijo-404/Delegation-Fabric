@@ -86,13 +86,22 @@ async def _issue_grant(
 
 
 async def _execute(
-    gw: AsyncClient, token: str, tool: str, arguments: dict[str, Any]
+    gw: AsyncClient,
+    token: str,
+    tool: str,
+    arguments: dict[str, Any],
+    agent_id: str = "invoice-reconciliation",
+    agent_version: str = "1.0.0",
 ) -> dict[str, Any]:
     return (
         await gw.post(
             "/v1/execute",
             json={"tool": tool, "arguments": arguments},
-            headers={"Authorization": f"Bearer {token}"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Agent-Id": agent_id,
+                "X-Agent-Version": agent_version,
+            },
         )
     ).json()
 
@@ -141,7 +150,11 @@ async def test_e2e_happy_path_replay_denial_and_audit_chain(
             await gw_c.post(
                 "/v1/execute",
                 json={"tool": "invoice.read", "arguments": {"invoice_id": "INV-042"}},
-                headers={"Authorization": f"Bearer {token}"},
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "X-Agent-Id": "invoice-reconciliation",
+                    "X-Agent-Version": "1.0.0",
+                },
             )
         ).status_code
         assert replay_status == 403
@@ -239,7 +252,14 @@ async def test_e2e_payment_requires_approval_and_sod(
             agent_version="1.0.3",
         )
         assert pay_grant["decision"] == "allow"
-        pay_result = await _execute(gw_c, pay_grant["token"], "payment.instruct", payment_args)
+        pay_result = await _execute(
+            gw_c,
+            pay_grant["token"],
+            "payment.instruct",
+            payment_args,
+            agent_id="treasury-approval",
+            agent_version="1.0.3",
+        )
         assert pay_result["result"]["status"] == "accepted"
 
 

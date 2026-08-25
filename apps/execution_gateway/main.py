@@ -25,7 +25,12 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import ulid
-from delegation_fabric_adapters.config import deployment_region, grant_audience, grant_issuer
+from delegation_fabric_adapters.config import (
+    DEFAULT_DEPLOYMENT_REGION,
+    deployment_region,
+    grant_audience,
+    grant_issuer,
+)
 from delegation_fabric_adapters.firestore.store import MemoryStore
 from delegation_fabric_adapters.kms.signer import JWSGrantVerifier
 from delegation_fabric_core.audit.chain import GENESIS_HASH, finalize_audit_event
@@ -129,7 +134,7 @@ class _BuiltinDemoERP:
 def create_app(
     store: MemoryStore | FirestoreStore | None = None,
     verifier: JWSGrantVerifier | None = None,
-    region: str = "asia-south1",
+    region: str = DEFAULT_DEPLOYMENT_REGION,
     erp: Any = None,
 ) -> FastAPI:
     app = FastAPI(title="Delegation Fabric Execution Gateway", version="0.2.0")
@@ -160,6 +165,31 @@ def create_app(
             )
 
         token = authorization[7:].strip()
+
+        # Fail-closed caller identity declaration (PLAN.md Day 2, step 9):
+        # the presenting agent MUST declare its id and version on every
+        # execution request so both can be bound against the signed grant
+        # claims. Checked before grant verification so a malformed request is
+        # rejected structurally and never consumes the single-use credential.
+        caller_agent = request.headers.get("x-agent-id")
+        if not caller_agent:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "MISSING_AGENT_ID",
+                    "message": "X-Agent-Id header is required for execution",
+                },
+            )
+        caller_version = request.headers.get("x-agent-version")
+        if not caller_version:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "MISSING_AGENT_VERSION",
+                    "message": "X-Agent-Version header is required for execution",
+                },
+            )
+
         try:
             header, grant = jws_verifier.parse_and_verify(token)
         except GrantSignatureError as e:
@@ -261,12 +291,21 @@ def create_app(
                 },
             )
 
-        # Step 9a: Agent binding — caller identity must match the grant subject
-        # (X-Agent-Id is derived from authenticated service context on Cloud Run;
-        # when present it must agree with the signed claim).
-        caller_agent = request.headers.get("x-agent-id")
-        if caller_agent and caller_agent != grant.agent_id:
+        # Step 9a: Agent ID binding — declared identity must match the grant subject.
+        # (X-Agent-Id is derived from authenticated service context on Cloud Run.)
+        if caller_agent != grant.agent_id:
             METRICS.inc("grant_denied_total", reason=ReasonCode.GRANT_AGENT_MISMATCH.value)
+            log_event(
+                "grant denied",
+                reason=ReasonCode.GRANT_AGENT_MISMATCH.value,
+                field="agent_id",
+                expected=grant.agent_id,
+                received=caller_agent,
+                task_id=grant.task_id,
+                delegation_id=grant.delegation_id,
+                grant_id=grant.grant_id,
+                decision="deny",
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={
@@ -275,7 +314,31 @@ def create_app(
                 },
             )
 
-        # Step 9b: Tool binding + adapter whitelist & required-argument validation
+        # Step 9b: Agent version binding — re-verified at execution time against
+        # the version pinned into the grant at issuance (stale-build defense).
+        if caller_version != grant.agent_version:
+            METRICS.inc("grant_denied_total", reason=ReasonCode.GRANT_AGENT_MISMATCH.value)
+            log_event(
+                "grant denied",
+                reason=ReasonCode.GRANT_AGENT_MISMATCH.value,
+                field="agent_version",
+                expected=grant.agent_version,
+                received=caller_version,
+                task_id=grant.task_id,
+                delegation_id=grant.delegation_id,
+                grant_id=grant.grant_id,
+                decision="deny",
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": ReasonCode.GRANT_AGENT_MISMATCH.value,
+                    "message": f"Caller agent version {caller_version!r} does not match "
+                    f"grant-pinned version {grant.agent_version!r}",
+                },
+            )
+
+        # Step 9c: Tool binding + adapter whitelist & required-argument validation
         # BEFORE consumption, so malformed requests never burn a single-use grant.
         if grant.tool != req.tool:
             raise HTTPException(
@@ -448,14 +511,18 @@ def create_app_from_env() -> FastAPI:
         build_store,
         build_verifier,
     )
+    from delegation_fabric_adapters.tracing import configure_tracing, instrument_fastapi_app
 
+    configure_tracing("execution-gateway")
     signer = build_signer()
-    return create_app(
+    application = create_app(
         store=build_store(),
         verifier=build_verifier(signer),
         region=deployment_region(),
         erp=build_erp_backend(),
     )
+    instrument_fastapi_app(application)
+    return application
 
 
 app = create_app_from_env()

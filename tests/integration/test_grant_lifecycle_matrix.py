@@ -74,11 +74,22 @@ async def _evaluate(
     ).json()
 
 
-async def _execute(gw: AsyncClient, token: str, tool: str, arguments: dict[str, Any]) -> Any:
+async def _execute(
+    gw: AsyncClient,
+    token: str,
+    tool: str,
+    arguments: dict[str, Any],
+    agent_id: str = "invoice-reconciliation",
+    agent_version: str = "1.0.0",
+) -> Any:
     return await gw.post(
         "/v1/execute",
         json={"tool": tool, "arguments": arguments},
-        headers={"Authorization": f"Bearer {token}"},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "X-Agent-Id": agent_id,
+            "X-Agent-Version": agent_version,
+        },
     )
 
 
