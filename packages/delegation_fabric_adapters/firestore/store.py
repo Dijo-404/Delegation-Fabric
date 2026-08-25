@@ -47,6 +47,11 @@ class MemoryStore:
             d = self.delegations.get(delegation_id)
             return d.model_copy() if d else None
 
+    async def list_delegations(self) -> list[Delegation]:
+        """Read-only listing for the console Delegations view (unsorted)."""
+        async with self._lock:
+            return [d.model_copy() for d in self.delegations.values()]
+
     # ─── Task CRUD & Transitions ───────────────────────────────────────────────
 
     async def put_task(self, task: Task) -> None:
@@ -89,6 +94,11 @@ class MemoryStore:
         async with self._lock:
             return self.checkpoints.get(checkpoint_id)
 
+    async def list_checkpoints(self, task_id: str) -> list[TaskCheckpoint]:
+        """Read-only checkpoint history for the console Task Inspector."""
+        async with self._lock:
+            return [c.model_copy() for c in self.checkpoints.values() if c.task_id == task_id]
+
     # ─── Grant Lifecycle & Atomic Consumption ───────────────────────────────────
 
     async def put_grant(self, grant: GrantRecord) -> None:
@@ -98,6 +108,11 @@ class MemoryStore:
     async def get_grant(self, grant_id: str) -> GrantRecord | None:
         async with self._lock:
             return self.grants.get(grant_id)
+
+    async def list_grants(self, task_id: str) -> list[GrantRecord]:
+        """Read-only grant history for the console Task Inspector."""
+        async with self._lock:
+            return [g.model_copy() for g in self.grants.values() if g.task_id == task_id]
 
     async def consume_grant_atomic(self, grant_id: str, now: datetime | None = None) -> GrantRecord:
         """Atomically transition grant status from ISSUED to CONSUMED."""
@@ -133,6 +148,16 @@ class MemoryStore:
     async def list_approvals(self, task_id: str) -> list[ApprovalRecord]:
         async with self._lock:
             return [a for a in self.approvals.values() if a.task_id == task_id]
+
+    async def list_all_approvals(self) -> list[ApprovalRecord]:
+        """Read-only approval queue listing for the console Approvals view (unsorted)."""
+        async with self._lock:
+            return [a.model_copy() for a in self.approvals.values()]
+
+    async def list_event_receipts(self, task_id: str) -> list[dict[str, Any]]:
+        """Read-only idempotency receipts for the console Task Inspector."""
+        async with self._lock:
+            return [dict(r) for r in self.event_receipts.values() if r.get("task_id") == task_id]
 
     # ─── Event Receipt Idempotency ─────────────────────────────────────────────
 

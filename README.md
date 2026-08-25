@@ -266,13 +266,13 @@ The architecture keeps runtime, sessions, Memory Bank, Agent Gateway, Model Armo
 delegation-fabric/
 ├── apps/
 │   ├── control_plane/
+│   │   └── console.py          # single-page read-only console (served at GET /console)
 │   ├── execution_gateway/
 │   ├── worker/
-│   ├── agents/
-│   │   ├── invoice_reconciliation/
-│   │   ├── procurement_exception/
-│   │   └── treasury_approval/
-│   └── console/
+│   └── agents/
+│       ├── invoice_reconciliation/
+│       ├── procurement_exception/
+│       └── treasury_approval/
 ├── packages/
 │   ├── delegation_fabric_core/
 │   │   ├── models/

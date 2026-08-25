@@ -71,6 +71,13 @@ class FirestoreStore:
 
         return await asyncio.to_thread(_get)
 
+    async def list_delegations(self) -> list[Delegation]:
+        def _list() -> list[Delegation]:
+            docs = self._db.collection("delegations").stream()
+            return [Delegation.model_validate(d.to_dict() or {}) for d in docs]
+
+        return await asyncio.to_thread(_list)
+
     # ─── Task CRUD & Transitions ───────────────────────────────────────────────
 
     async def put_task(self, task: Task) -> None:
@@ -144,6 +151,19 @@ class FirestoreStore:
 
         return await asyncio.to_thread(_get)
 
+    async def list_checkpoints(self, task_id: str) -> list[TaskCheckpoint]:
+        def _list() -> list[TaskCheckpoint]:
+            from google.cloud.firestore import FieldFilter
+
+            docs = (
+                self._db.collection("checkpoints")
+                .where(filter=FieldFilter("task_id", "==", task_id))
+                .stream()
+            )
+            return [TaskCheckpoint.model_validate(d.to_dict() or {}) for d in docs]
+
+        return await asyncio.to_thread(_list)
+
     # ─── Grant Lifecycle & Atomic Consumption ───────────────────────────────────
 
     async def put_grant(self, grant: GrantRecord) -> None:
@@ -161,6 +181,19 @@ class FirestoreStore:
             return GrantRecord.model_validate(data)
 
         return await asyncio.to_thread(_get)
+
+    async def list_grants(self, task_id: str) -> list[GrantRecord]:
+        def _list() -> list[GrantRecord]:
+            from google.cloud.firestore import FieldFilter
+
+            docs = (
+                self._db.collection("grants")
+                .where(filter=FieldFilter("task_id", "==", task_id))
+                .stream()
+            )
+            return [GrantRecord.model_validate(d.to_dict() or {}) for d in docs]
+
+        return await asyncio.to_thread(_list)
 
     async def consume_grant_atomic(self, grant_id: str, now: datetime | None = None) -> GrantRecord:
         """Atomically transition grant status from ISSUED to CONSUMED in a transaction."""
@@ -229,6 +262,26 @@ class FirestoreStore:
             return ApprovalRecord.model_validate(data)
 
         return await asyncio.to_thread(_get)
+
+    async def list_all_approvals(self) -> list[ApprovalRecord]:
+        def _list() -> list[ApprovalRecord]:
+            docs = self._db.collection("approvals").stream()
+            return [ApprovalRecord.model_validate(d.to_dict() or {}) for d in docs]
+
+        return await asyncio.to_thread(_list)
+
+    async def list_event_receipts(self, task_id: str) -> list[dict[str, Any]]:
+        def _list() -> list[dict[str, Any]]:
+            from google.cloud.firestore import FieldFilter
+
+            docs = (
+                self._db.collection("event_receipts")
+                .where(filter=FieldFilter("task_id", "==", task_id))
+                .stream()
+            )
+            return [d.to_dict() or {} for d in docs]
+
+        return await asyncio.to_thread(_list)
 
     # ─── Event Receipt Idempotency ─────────────────────────────────────────────
 

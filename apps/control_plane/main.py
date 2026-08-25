@@ -775,7 +775,9 @@ def create_app(
             if task.current_agent_id
             else None,
             "version": task.state_version,
+            "policy_version": task.policy_version or None,
             "latest_checkpoint_id": task.latest_checkpoint_id or None,
+            "created_at": task.created_at.isoformat(),
             "updated_at": task.updated_at.isoformat(),
         }
 
@@ -868,35 +870,112 @@ def create_app(
 
     register_console(app)
 
+    def _manifest_view(m: AgentManifest) -> dict[str, Any]:
+        return {
+            "agent_id": m.agent_id,
+            "version": m.version,
+            "owner": m.owner or None,
+            "risk_class": m.risk_class.value,
+            "capabilities": m.capabilities,
+            "denied_tools": m.denied_tools,
+            "allowed_regions": m.allowed_regions,
+            "deployment_revision": m.deployment_revision or None,
+        }
+
     @app.get("/v1/agents")
     async def list_agents() -> list[dict[str, Any]]:
-        return [
-            {
-                "agent_id": m.agent_id,
-                "version": m.version,
-                "risk_class": m.risk_class.value,
-                "capabilities": m.capabilities,
-                "denied_tools": m.denied_tools,
-                "allowed_regions": m.allowed_regions,
-            }
-            for m in agent_manifests.values()
-        ]
+        return [_manifest_view(m) for m in agent_manifests.values()]
 
     @app.get("/v1/agents/{agent_id}/versions/{version}")
     async def get_agent(agent_id: str, version: str) -> dict[str, Any]:
         m = agent_manifests.get(agent_id)
         if not m or m.version != version:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        return _manifest_view(m)
+
+    # ─── 6. Delegation & approval read facades (console) ──────────────────────
+
+    @app.get("/v1/delegations")
+    async def list_delegations() -> list[dict[str, Any]]:
+        delegations = await db.list_delegations()
+        delegations.sort(key=lambda d: d.created_at, reverse=True)
+        return [
+            {
+                "delegation_id": d.delegation_id,
+                "sponsor": d.sponsor.subject,
+                "purpose": d.purpose,
+                "task_id": d.task_id,
+                "status": d.status.value,
+                "policy_version": d.policy_version,
+                "created_at": d.created_at.isoformat(),
+                "expires_at": d.expires_at.isoformat(),
+            }
+            for d in delegations
+        ]
+
+    @app.get("/v1/delegations/{delegation_id}")
+    async def get_delegation_detail(delegation_id: str) -> dict[str, Any]:
+        d = await db.get_delegation(delegation_id)
+        if not d:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Delegation not found"
+            )
         return {
-            "agent_id": m.agent_id,
-            "version": m.version,
-            "risk_class": m.risk_class.value,
-            "capabilities": m.capabilities,
-            "denied_tools": m.denied_tools,
-            "allowed_regions": m.allowed_regions,
+            "delegation_id": d.delegation_id,
+            "sponsor": d.sponsor.model_dump(mode="json"),
+            "purpose": d.purpose,
+            "task_id": d.task_id,
+            "allowed_agents": d.allowed_agents,
+            "allowed_regions": d.allowed_regions,
+            "status": d.status.value,
+            "policy_version": d.policy_version,
+            "created_at": d.created_at.isoformat(),
+            "expires_at": d.expires_at.isoformat(),
+            "revoked_at": d.revoked_at.isoformat() if d.revoked_at else None,
+            "revoked_by": d.revoked_by,
         }
 
-    # ─── 6. Audit ──────────────────────────────────────────────────────────────
+    @app.get("/v1/approvals")
+    async def list_all_approvals() -> list[dict[str, Any]]:
+        approvals = await db.list_all_approvals()
+        approvals.sort(key=lambda a: a.created_at, reverse=True)
+        return [
+            {
+                "approval_id": a.approval_id,
+                "task_id": a.task_id,
+                "delegation_id": a.delegation_id,
+                "approval_type": a.approval_type,
+                "subject": a.subject,
+                "subject_hash": a.subject_hash,
+                "decision": a.decision.value,
+                "approver_subject": a.approver_subject,
+                "created_at": a.created_at.isoformat(),
+                "expires_at": a.expires_at.isoformat(),
+                "used_by_grant_id": a.used_by_grant_id,
+                "policy_version": a.policy_version,
+            }
+            for a in approvals
+        ]
+
+    # ─── 7. Task depth (console Task Inspector) ───────────────────────────────
+
+    @app.get("/v1/tasks/{task_id}/depth")
+    async def get_task_depth(task_id: str) -> dict[str, Any]:
+        task = await db.get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        checkpoints = await db.list_checkpoints(task_id)
+        grants = await db.list_grants(task_id)
+        approvals = await db.list_approvals(task_id)
+        receipts = await db.list_event_receipts(task_id)
+        return {
+            "checkpoints": [c.model_dump(mode="json") for c in checkpoints],
+            "grants": [g.model_dump(mode="json") for g in grants],
+            "approvals": [a.model_dump(mode="json") for a in approvals],
+            "event_receipts": receipts,
+        }
+
+    # ─── 8. Audit ──────────────────────────────────────────────────────────────
 
     @app.get("/v1/audit/tasks/{task_id}")
     async def get_audit_events(task_id: str) -> list[dict[str, Any]]:

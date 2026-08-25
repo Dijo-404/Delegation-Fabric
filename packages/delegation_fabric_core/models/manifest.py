@@ -42,6 +42,7 @@ class AgentManifest(BaseModel):
     display_name: str = ""
     owner: str = ""
     risk_class: RiskClass = RiskClass.MEDIUM
+    deployment_revision: str = ""
 
     capabilities: list[str] = Field(
         default_factory=list,
