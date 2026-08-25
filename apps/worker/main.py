@@ -88,7 +88,7 @@ def create_app(store: MemoryStore | FirestoreStore | None = None) -> FastAPI:
         event_id: str,
         now: datetime,
     ) -> None:
-        chain = await db.get_audit_events(task_id)
+        chain = await db.get_audit_events(task_id, limit=None)
         prev_hash = chain[-1].event_hash if chain else GENESIS_HASH
         audit_evt = AuditEvent(
             audit_event_id=f"aud_{ulid.ULID()}",

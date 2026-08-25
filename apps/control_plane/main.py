@@ -229,7 +229,7 @@ def create_app(
     # ─── Internal helpers ──────────────────────────────────────────────────────
 
     async def _append_audit(evt: AuditEvent) -> AuditEvent:
-        chain = await db.get_audit_events(evt.task_id)
+        chain = await db.get_audit_events(evt.task_id, limit=None)
         prev_hash = chain[-1].event_hash if chain else GENESIS_HASH
         finalized = finalize_audit_event(evt, prev_hash)
         await db.append_audit_event(finalized)
@@ -1004,7 +1004,7 @@ def create_app(
 
     @app.post("/v1/audit/tasks/{task_id}/export")
     async def export_audit(task_id: str) -> dict[str, Any]:
-        events_list = await db.get_audit_events(task_id)
+        events_list = await db.get_audit_events(task_id, limit=None)
         if not events_list:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No audit events")
         uri = await exporter.export_chain(task_id, events_list)
@@ -1012,7 +1012,7 @@ def create_app(
 
     @app.get("/v1/audit/tasks/{task_id}/verify")
     async def verify_audit(task_id: str) -> dict[str, Any]:
-        events_list = await db.get_audit_events(task_id)
+        events_list = await db.get_audit_events(task_id, limit=None)
         result: ChainVerificationResult = verify_audit_chain(events_list)
         payload = result.model_dump(mode="json") if hasattr(result, "model_dump") else dict(result)
         payload["events"] = payload.pop("event_count", None)

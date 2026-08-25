@@ -381,7 +381,7 @@ def create_app(
         projection = project_fields(raw_result, grant.allowed_response_fields)
 
         # Append Audit Event
-        existing_chain = await db.get_audit_events(grant.task_id)
+        existing_chain = await db.get_audit_events(grant.task_id, limit=None)
         prev_hash = existing_chain[-1].event_hash if existing_chain else GENESIS_HASH
 
         audit_evt = AuditEvent(

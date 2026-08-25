@@ -32,7 +32,6 @@ _SAFE_INTERPOLATION_PREFIXES = (
     "approvalQueue(",
     "revokedCell(",
     "durationRow(",
-    "maskedCell(",
     "sponsorLabel(",
 )
 
