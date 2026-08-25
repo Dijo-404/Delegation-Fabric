@@ -49,6 +49,9 @@ class TreasuryApprovalTools:
         res = exec_resp.json().get("result", {})
         return dict(res) if isinstance(res, dict) else {}
 
+    async def read_payment_batch(self, batch_id: str) -> dict[str, Any]:
+        return await self._evaluate_and_execute("payment_batch.read", {"batch_id": batch_id})
+
     async def instruct_payment(
         self, batch_id: str, amount_minor: int, currency: str = "INR"
     ) -> dict[str, Any]:

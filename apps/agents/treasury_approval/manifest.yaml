@@ -1,0 +1,20 @@
+agent_id: treasury-approval
+version: 1.0.3
+display_name: Treasury Approval & Execution Agent
+owner: treasury@example.com
+risk_class: critical
+capabilities:
+  - payment_batch.read
+  - payment.instruct
+denied_tools: []
+allowed_regions:
+  - asia-south1
+memory:
+  classes:
+    - working_state
+    - episodic
+  ttl_days: 30
+  prohibited_content:
+    - bank_account
+    - secret
+    - execution_grant
