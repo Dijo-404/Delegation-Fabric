@@ -25,6 +25,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import ulid as ulid_mod
+from delegation_fabric_adapters.config import grant_audience, grant_issuer
 from delegation_fabric_adapters.firestore.store import MemoryStore
 from delegation_fabric_adapters.kms.signer import LocalKMSSigner
 from delegation_fabric_core.audit.chain import (
@@ -632,8 +633,8 @@ def create_app(
 
         grant = ExecutionGrant(
             jti=grant_id,
-            iss="delegation-fabric-control-plane",
-            aud="delegation-fabric-execution-gateway",
+            iss=grant_issuer(),
+            aud=grant_audience(),
             delegation_id=req.delegation_id,
             task_id=req.task_id,
             agent_id=req.agent.id,

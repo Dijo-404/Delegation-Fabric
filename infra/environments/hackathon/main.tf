@@ -52,9 +52,13 @@ locals {
   kms_key_version_ref = "${google_kms_crypto_key.grant_signing.id}/cryptoKeyVersions/1"
 
   # Environment shared by all three services (mirrors .env.example).
+  # Both region variable names are set so code resolving either
+  # (GOOGLE_CLOUD_LOCATION preferred, GOOGLE_CLOUD_REGION fallback) stays
+  # in sync when var.region is overridden.
   env_common = {
     GOOGLE_CLOUD_PROJECT  = var.project_id
     GOOGLE_CLOUD_LOCATION = var.region
+    GOOGLE_CLOUD_REGION   = var.region
     DF_ENV                = "hackathon"
     DF_STORE              = "firestore"
     DF_PUBSUB_PROJECT     = var.project_id

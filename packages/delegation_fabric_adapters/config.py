@@ -17,6 +17,26 @@ if TYPE_CHECKING:
 
 _LOCAL_SIGNER: LocalKMSSigner | None = None
 
+DEFAULT_GRANT_ISSUER = "delegation-fabric-control-plane"
+DEFAULT_GRANT_AUDIENCE = "delegation-fabric-execution-gateway"
+DEFAULT_DEPLOYMENT_REGION = "asia-south1"
+
+
+def grant_issuer() -> str:
+    return os.environ.get("DF_GRANT_ISSUER") or DEFAULT_GRANT_ISSUER
+
+
+def grant_audience() -> str:
+    return os.environ.get("DF_GRANT_AUDIENCE") or DEFAULT_GRANT_AUDIENCE
+
+
+def deployment_region() -> str:
+    return (
+        os.environ.get("GOOGLE_CLOUD_LOCATION")
+        or os.environ.get("GOOGLE_CLOUD_REGION")
+        or DEFAULT_DEPLOYMENT_REGION
+    )
+
 
 def build_store() -> MemoryStore | FirestoreStore:
     if os.environ.get("DF_STORE") == "firestore":
@@ -98,4 +118,7 @@ __all__ = [
     "build_signer",
     "build_store",
     "build_verifier",
+    "deployment_region",
+    "grant_audience",
+    "grant_issuer",
 ]

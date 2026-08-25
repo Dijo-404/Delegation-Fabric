@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import ulid
+from delegation_fabric_adapters.config import deployment_region, grant_audience, grant_issuer
 from delegation_fabric_adapters.firestore.store import MemoryStore
 from delegation_fabric_adapters.kms.signer import JWSGrantVerifier
 from delegation_fabric_core.audit.chain import GENESIS_HASH, finalize_audit_event
@@ -165,7 +166,7 @@ def create_app(
             ) from e
 
         # Step 5: Issuer and Audience verification
-        if grant.iss != "delegation-fabric-control-plane":
+        if grant.iss != grant_issuer():
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={
@@ -173,7 +174,7 @@ def create_app(
                     "message": f"Unexpected issuer: {grant.iss}",
                 },
             )
-        if grant.aud != "delegation-fabric-execution-gateway":
+        if grant.aud != grant_audience():
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={
@@ -443,7 +444,7 @@ def create_app_from_env() -> FastAPI:
     return create_app(
         store=build_store(),
         verifier=build_verifier(signer),
-        region=os.environ.get("GOOGLE_CLOUD_REGION", "asia-south1"),
+        region=deployment_region(),
         erp=build_erp_backend(),
     )
 
